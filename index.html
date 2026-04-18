@@ -529,7 +529,7 @@ function renderLanding() {
   document.getElementById('source-count').textContent = SOURCE_KEYS.filter(function(k) { return bySource[k].total > 0; }).length;
 
   // Recent mugs — top 24 by parseDate(bookDate) with mugshot
-  var withMug = RECORDS.filter(function(r) { return r.mugshot && !r.releaseDate; }).slice(0, 24);
+  var withMug = RECORDS.filter(function(r) { return r.mugshot && !r.releaseDate; }).slice(0, 100);
   var rmHTML = '';
   withMug.forEach(function(r) {
     var gi = RECORDS.indexOf(r);
