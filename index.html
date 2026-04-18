@@ -321,13 +321,13 @@ function progress() {
 }
 
 function finalizeLoad() {
-  // Sort: in-custody first, with-mugshot first, newest bookDate first
+  // Sort: in-custody first, with-mugshot first, newest firstSeenAt first (bookDate tiebreaker). See SORT_RULE.md.
   RECORDS.sort(function(a, b) {
     var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
     if (ar !== br) return ar - br;
     var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
     if (am !== bm) return am - bm;
-    return parseDate(b.bookDate) - parseDate(a.bookDate);
+    var fa = a.firstSeenAt || '', fb = b.firstSeenAt || ''; if (fa && fb && fa !== fb) return fb < fa ? -1 : 1; if (fa && !fb) return -1; if (!fa && fb) return 1; return parseDate(b.bookDate) - parseDate(a.bookDate);
   });
   document.getElementById('loading').classList.add('done');
   buildFilters();
