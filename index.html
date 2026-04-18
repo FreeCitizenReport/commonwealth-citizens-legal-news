@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Commonwealth Citizens Legal News</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+#header { background: #161b22; border-bottom: 1px solid #30363d; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+#header h1 { margin: 0; font-size: 18px; color: #f0f6fc; font-weight: 700; flex: 1 1 auto; }
+#header h1 .subtitle { display: block; font-size: 11px; color: #8b949e; font-weight: 400; }
+
+.view-toggle { display: flex; gap: 4px; }
+.view-toggle button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+.view-toggle button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+
+#search-wrap { position: relative; flex: 1 1 220px; max-width: 360px; }
+#search { width: 100%; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 10px; border-radius: 4px; font-size: 13px; }
+#search-results { position: absolute; top: 100%; left: 0; right: 0; background: #161b22; border: 1px solid #30363d; max-height: 320px; overflow-y: auto; z-index: 100; display: none; }
+#search-results .sr-item { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #21262d; font-size: 13px; }
+#search-results .sr-item:hover { background: #21262d; }
+#search-results .sr-item .sr-src { font-size: 10px; color: #8b949e; }
+
+#jump-wrap { display: flex; gap: 4px; align-items: center; }
+#jump-wrap input { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 8px; border-radius: 4px; width: 90px; font-size: 13px; }
+#jump-wrap button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+
+#filter-toggle { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+#filter-toggle.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+
+#nav-btns { display: flex; gap: 4px; }
+#nav-btns button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; min-width: 36px; }
+#nav-btns button:hover:not(:disabled) { background: #30363d; }
+#nav-btns button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#counter { font-size: 13px; color: #8b949e; padding: 0 8px; white-space: nowrap; }
+
+#disclaimer { background: #2d1f1f; border-bottom: 1px solid #f85149; padding: 6px 16px; font-size: 11px; color: #ff7b72; text-align: center; }
+
+#filter-bar { display: none; background: #161b22; border-bottom: 1px solid #30363d; padding: 10px 16px; flex-wrap: wrap; gap: 12px; }
+#filter-bar.open { display: flex; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-group label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+.filter-group select, .filter-group input { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 4px 8px; border-radius: 4px; font-size: 12px; min-width: 130px; }
+
+.badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+.badge-held { background: #da3633; color: #fff; }
+.badge-released { background: #238636; color: #fff; }
+.badge-source { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+.src-rrj { background: #1f3a5f; color: #79c0ff; }
+.src-henrico { background: #2d1f3d; color: #d2a8ff; }
+.src-richmond { background: #1f3d2a; color: #56d364; }
+.src-pamunkey { background: #3d2a1f; color: #fd7e14; }
+.src-peninsula { background: #3d2f1f; color: #f9b369; }
+.src-arlington { background: #1f3d3a; color: #4ecdc4; }
+
+#landing { display: none; padding: 20px 16px; max-width: 1400px; margin: 0 auto; }
+#landing.active { display: block; }
+#landing h2 { color: #f0f6fc; font-size: 22px; margin: 0 0 6px; }
+#landing .landing-subtitle { color: #8b949e; font-size: 13px; margin-bottom: 20px; }
+#landing .source-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+#landing .source-card { flex: 1 1 180px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; }
+#landing .source-card h3 { margin: 0 0 4px; font-size: 14px; color: #f0f6fc; }
+#landing .source-card .count { font-size: 24px; font-weight: 700; color: #58a6ff; }
+#landing .source-card .held { font-size: 11px; color: #8b949e; }
+#landing .recent-section h3 { color: #f0f6fc; font-size: 16px; margin: 20px 0 10px; border-bottom: 1px solid #30363d; padding-bottom: 6px; }
+#landing .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+#landing .recent-card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; overflow: hidden; cursor: pointer; }
+#landing .recent-card:hover { border-color: #58a6ff; }
+#landing .recent-card .mug { background: #21262d; aspect-ratio: 4 / 5; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+#landing .recent-card .mug img { width: 100%; height: 100%; object-fit: cover; }
+#landing .recent-card .mug .nomug { color: #8b949e; font-size: 10px; }
+#landing .recent-card .rc-meta { padding: 8px; }
+#landing .recent-card .rc-name { font-size: 12px; font-weight: 600; color: #f0f6fc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#landing .recent-card .rc-date { font-size: 10px; color: #8b949e; }
+
+#browse { display: none; max-width: 1600px; margin: 0 auto; padding: 12px; }
+#browse.active { display: flex; gap: 12px; }
+
+#left-panel { flex: 0 0 260px; }
+#mugshot-wrap { background: #161b22; border: 1px solid #30363d; border-radius: 6px; overflow: hidden; aspect-ratio: 4 / 5; display: flex; align-items: center; justify-content: center; }
+#mugshot-wrap img { width: 100%; height: 100%; object-fit: cover; }
+#mugshot-wrap .nomug { color: #8b949e; font-size: 12px; padding: 20px; text-align: center; }
+#id-info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; margin-top: 8px; padding: 10px; }
+.id-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #21262d; font-size: 12px; }
+.id-row:last-child { border-bottom: 0; }
+.id-label { color: #8b949e; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; align-self: center; }
+.id-value { color: #f0f6fc; text-align: right; max-width: 60%; }
+.id-row.id-name .id-value { font-weight: 700; font-size: 13px; }
+
+#center-panel { flex: 1 1 auto; min-width: 0; }
+#charges-header { background: #161b22; border: 1px solid #30363d; border-radius: 6px 6px 0 0; padding: 10px; font-weight: 600; color: #f0f6fc; border-bottom: 0; }
+#charges-list { background: #161b22; border: 1px solid #30363d; border-radius: 0 0 6px 6px; padding: 8px; }
+.charge-card { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 10px; margin-bottom: 6px; }
+.charge-card:last-child { margin-bottom: 0; }
+.charge-title { font-size: 13px; font-weight: 600; color: #f0f6fc; margin-bottom: 4px; }
+.charge-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: #8b949e; }
+.charge-meta span { display: inline-block; }
+.charge-meta b { color: #c9d1d9; font-weight: 500; }
+.grade-felony-a { border-left: 3px solid #f85149; }
+.grade-felony-b { border-left: 3px solid #db6d28; }
+.grade-misd { border-left: 3px solid #d29922; }
+.grade-civil { border-left: 3px solid #8b949e; }
+
+.bond-section-title { font-weight: 600; color: #f0f6fc; padding: 10px 0 6px; font-size: 13px; }
+.bond-card { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 8px; margin-bottom: 4px; font-size: 12px; }
+
+#right-panel { flex: 0 0 280px; }
+#court-history-header { background: #161b22; border: 1px solid #30363d; border-radius: 6px 6px 0 0; padding: 10px; font-weight: 600; color: #f0f6fc; border-bottom: 0; }
+#court-history-list { background: #161b22; border: 1px solid #30363d; border-radius: 0 0 6px 6px; padding: 8px; max-height: 640px; overflow-y: auto; }
+.court-card { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 8px; margin-bottom: 4px; font-size: 11px; }
+.court-card .court-name { font-weight: 600; color: #f0f6fc; margin-bottom: 2px; }
+.court-card .court-date { color: #8b949e; }
+.court-card .charge-refs { color: #58a6ff; font-size: 10px; margin-top: 2px; }
+
+#ad-panel { max-width: 1600px; margin: 12px auto 20px; padding: 0 12px; }
+#ad-panel .ad-box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; text-align: center; font-size: 12px; color: #8b949e; }
+#ad-panel .ad-box a { color: #58a6ff; font-weight: 600; }
+
+#loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 20px 30px; text-align: center; font-size: 14px; color: #c9d1d9; z-index: 1000; }
+#loading .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading .progress-bar { width: 220px; height: 4px; background: #21262d; border-radius: 2px; margin: 10px auto 0; overflow: hidden; }
+#loading .progress-fill { height: 100%; background: #58a6ff; width: 0; transition: width 0.3s; }
+#loading.done { display: none; }
+
+@media (max-width: 1100px) {
+  #browse.active { flex-direction: column; }
+  #left-panel, #right-panel { flex: 1 1 auto; width: 100%; }
+}
+@media (max-width: 700px) {
+  #header { gap: 6px; padding: 8px; }
+  #header h1 { font-size: 14px; flex-basis: 100%; }
+  #search-wrap { max-width: none; flex-basis: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Commonwealth Citizens Legal News <span class="subtitle">Virginia inmate records — aggregated from public jail rosters</span></h1>
+  <div class="view-toggle">
+    <button id="btn-home" class="active">Home</button>
+    <button id="btn-browse">Browse</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search by name or ID..." autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <div id="jump-wrap">
+    <input id="jump-input" type="text" placeholder="Jacket #" />
+    <button id="jump-btn">Go</button>
+  </div>
+  <button id="filter-toggle">Filters</button>
+  <div id="nav-btns">
+    <button id="prev-btn">&larr;</button>
+    <button id="next-btn">&rarr;</button>
+  </div>
+  <div id="counter">0 / 0</div>
+</div>
+
+<div id="disclaimer">Public records. An arrest is not a conviction. All individuals are presumed innocent.</div>
+
+<div id="filter-bar">
+  <div class="filter-group"><label>Source</label><select id="f-source"><option value="">All sources</option><option value="RRJ">Riverside Regional Jail</option><option value="Henrico">Henrico County</option><option value="Richmond">Richmond City</option><option value="Pamunkey">Pamunkey Regional</option><option value="Peninsula">Peninsula Regional</option><option value="Arlington">Arlington County</option></select></div>
+  <div class="filter-group"><label>Custody</label><select id="f-custody"><option value="">All</option><option value="held">In custody</option><option value="released">Released</option></select></div>
+  <div class="filter-group"><label>Sex</label><select id="f-sex"><option value="">All</option></select></div>
+  <div class="filter-group"><label>Race</label><select id="f-race"><option value="">All</option></select></div>
+  <div class="filter-group"><label>Mugshot</label><select id="f-mug"><option value="">All</option><option value="yes">Has mugshot</option><option value="no">No mugshot</option></select></div>
+  <div class="filter-group"><label>Charge keyword</label><input id="f-charge" type="text" placeholder="e.g. assault" /></div>
+  <div class="filter-group"><label>Court keyword</label><input id="f-court" type="text" placeholder="e.g. Circuit" /></div>
+</div>
+
+<div id="landing" class="active">
+  <h2>Recent Arrests Across Virginia</h2>
+  <p class="landing-subtitle">Booking data from <span id="source-count">0</span> jail systems across the Commonwealth. Click Browse to view every record with filters.</p>
+  <div id="source-cards" class="source-row"></div>
+  <div class="recent-section">
+    <h3>Latest mugshots</h3>
+    <div id="recent-mugs" class="recent-grid"></div>
+  </div>
+</div>
+
+<div id="browse">
+  <div id="left-panel">
+    <div id="mugshot-wrap"><div class="nomug">Loading...</div></div>
+    <div id="id-info"></div>
+  </div>
+  <div id="center-panel">
+    <div id="charges-header">Charges</div>
+    <div id="charges-list"></div>
+  </div>
+  <div id="right-panel">
+    <div id="court-history-header">Court History</div>
+    <div id="court-history-list"></div>
+  </div>
+</div>
+
+<div id="ad-panel">
+  <div class="ad-box">Attorney? List your firm here. <a href="mailto:van@vanhardenbergh.com">Contact</a></div>
+</div>
+
+<div id="loading"><div><span class="spinner"></span>Loading <span id="loaded-count">0</span> / 6 sources...</div><div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div></div>
+
+<script>
+var RECORDS = [];
+var mugshotURLs = {};
+var filtered = [];
+var currentIdx = 0;
+var sourcesLoaded = { rrj: false, henrico: false, richmond: false, pamunkey: false, peninsula: false, arlington: false };
+var SOURCE_KEYS = ['rrj', 'henrico', 'richmond', 'pamunkey', 'peninsula', 'arlington'];
+var SOURCE_URLS = {
+  rrj: 'https://freecitizenreport.github.io/rrj-viewer/data.json',
+  henrico: 'https://freecitizenreport.github.io/henrico-viewer/data.json',
+  richmond: 'https://freecitizenreport.github.io/richmond-viewer/data.json',
+  pamunkey: 'https://freecitizenreport.github.io/pamunkey-viewer/data.json',
+  peninsula: 'https://freecitizenreport.github.io/peninsula-viewer/data.json',
+  arlington: 'https://freecitizenreport.github.io/arlington-viewer/data.json'
+};
+var SOURCE_LABELS = {
+  RRJ: 'Riverside Regional Jail',
+  Henrico: 'Henrico County',
+  Richmond: 'Richmond City',
+  Pamunkey: 'Pamunkey Regional',
+  Peninsula: 'Peninsula Regional',
+  Arlington: 'Arlington County'
+};
+var SOURCE_CLASSES = {
+  RRJ: 'src-rrj', Henrico: 'src-henrico', Richmond: 'src-richmond',
+  Pamunkey: 'src-pamunkey', Peninsula: 'src-peninsula', Arlington: 'src-arlington'
+};
+
+function esc(s) { if (s === null || s === undefined) return ''; return String(s).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+function parseDate(d) { if (!d) return 0; var m = String(d).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if (!m) return 0; var y = parseInt(m[3], 10); if (y < 100) y += 2000; return new Date(y, parseInt(m[1], 10) - 1, parseInt(m[2], 10)).getTime(); }
+function fmtDate(d) { if (!d) return ''; var m = String(d).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if (!m) return String(d).slice(0, 10); var y = parseInt(m[3], 10); if (y < 100) y += 2000; var mo = String(parseInt(m[1], 10)).padStart(2, '0'); var dy = String(parseInt(m[2], 10)).padStart(2, '0'); return mo + '/' + dy + '/' + y; }
+
+function normalizeSimple(arr, src) {
+  return (arr || []).map(function(r) {
+    var name = r.name;
+    if (!name && (r.lastName || r.firstName)) {
+      var mid = r.middleName ? ' ' + r.middleName : '';
+      name = (r.lastName || '') + ', ' + (r.firstName || '') + mid;
+    }
+    var dob = r.dob || (r.age ? 'Age ' + r.age : '');
+    var charges = (r.charges || []).map(function(c) {
+      if (typeof c === 'string') return { description: c };
+      return c;
+    });
+    return {
+      id: r.id || r.jacket || r.bookingNum || '',
+      name: name || '',
+      dob: dob || '',
+      sex: r.sex || '',
+      race: r.race || '',
+      bookDate: r.bookDate || r.commitmentDate || '',
+      releaseDate: r.releaseDate || '',
+      charges: charges,
+      bonds: r.bonds || [],
+      mugshot: r.mugshot || '',
+      mugshotDate: r.mugshotDate || '',
+      courtHistory: r.courtHistory || [],
+      county: r.county || r.address || '',
+      source: src,
+      _raw: r
+    };
+  });
+}
+function normalizeRRJ(arr) { return normalizeSimple(arr, 'RRJ'); }
+function normalizeHenrico(arr) {
+  return (arr || []).map(function(r) {
+    // Henrico uses "LEROY EARL THOMAS" → flip to "THOMAS, LEROY EARL"
+    var rawName = r.name || '';
+    var parts = rawName.trim().split(/\s+/);
+    var name = rawName;
+    if (parts.length > 1 && rawName.indexOf(',') === -1) {
+      var last = parts.pop();
+      name = last + ', ' + parts.join(' ');
+    }
+    return {
+      id: r.id || r.bookingNum || '',
+      name: name,
+      dob: r.dob || '',
+      sex: r.sex || '',
+      race: r.race || '',
+      bookDate: fmtDate(r.bookDate || r.commitmentDate || ''),
+      releaseDate: fmtDate(r.releaseDate || ''),
+      charges: (r.charges || []).map(function(c) { return typeof c === 'string' ? { description: c } : c; }),
+      bonds: r.bonds || [],
+      mugshot: r.mugshot || '',
+      mugshotDate: r.mugshotDate || '',
+      courtHistory: r.courtHistory || [],
+      county: r.county || 'Henrico County',
+      source: 'Henrico',
+      _raw: r
+    };
+  });
+}
+function normalizeRichmond(arr) { return normalizeSimple(arr, 'Richmond'); }
+function normalizePamunkey(arr) { return normalizeSimple(arr, 'Pamunkey'); }
+function normalizePeninsula(arr) { return normalizeSimple(arr, 'Peninsula'); }
+function normalizeArlington(arr) { return normalizeSimple(arr, 'Arlington'); }
+
+var NORMALIZERS = {
+  rrj: normalizeRRJ, henrico: normalizeHenrico, richmond: normalizeRichmond,
+  pamunkey: normalizePamunkey, peninsula: normalizePeninsula, arlington: normalizeArlington
+};
+
+function progress() {
+  var done = 0;
+  for (var i = 0; i < SOURCE_KEYS.length; i++) if (sourcesLoaded[SOURCE_KEYS[i]]) done++;
+  document.getElementById('loaded-count').textContent = done;
+  document.getElementById('progress-fill').style.width = (done / SOURCE_KEYS.length * 100) + '%';
+  if (done === SOURCE_KEYS.length) {
+    finalizeLoad();
+  }
+}
+
+function finalizeLoad() {
+  // Sort: in-custody first, with-mugshot first, newest bookDate first
+  RECORDS.sort(function(a, b) {
+    var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
+    if (ar !== br) return ar - br;
+    var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
+    if (am !== bm) return am - bm;
+    return parseDate(b.bookDate) - parseDate(a.bookDate);
+  });
+  document.getElementById('loading').classList.add('done');
+  buildFilters();
+  applyFilters();
+  renderLanding();
+  preloadBlobs();
+  handleDeepLink();
+}
+
+function fetchSource(key) {
+  fetch(SOURCE_URLS[key] + '?v=' + new Date().toISOString().slice(0, 10), { cache: 'no-store' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      RECORDS = RECORDS.concat(NORMALIZERS[key](data));
+      sourcesLoaded[key] = true;
+    })
+    .catch(function(e) { console.error(key + ' load failed:', e); sourcesLoaded[key] = true; })
+    .then(progress);
+}
+SOURCE_KEYS.forEach(fetchSource);
+
+function preloadBlobs() {
+  var batch = 0;
+  function doBatch() {
+    var end = Math.min(batch + 20, RECORDS.length);
+    for (var i = batch; i < end; i++) {
+      var r = RECORDS[i];
+      if (r.mugshot && !mugshotURLs[i]) {
+        try {
+          var commaIdx = r.mugshot.indexOf(',');
+          if (commaIdx > -1) {
+            var bin = atob(r.mugshot.substring(commaIdx + 1));
+            var bytes = new Uint8Array(bin.length);
+            for (var j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+            mugshotURLs[i] = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+          }
+        } catch(e) {}
+      }
+    }
+    batch = end;
+    if (batch < RECORDS.length) setTimeout(doBatch, 50);
+  }
+  setTimeout(doBatch, 100);
+}
+
+function buildFilters() {
+  var sexes = {}, races = {};
+  RECORDS.forEach(function(r) {
+    if (r.sex) sexes[r.sex] = true;
+    if (r.race) races[r.race] = true;
+  });
+  var sexSel = document.getElementById('f-sex');
+  Object.keys(sexes).sort().forEach(function(s) {
+    var o = document.createElement('option'); o.value = s; o.textContent = s; sexSel.appendChild(o);
+  });
+  var raceSel = document.getElementById('f-race');
+  Object.keys(races).sort().forEach(function(s) {
+    var o = document.createElement('option'); o.value = s; o.textContent = s; raceSel.appendChild(o);
+  });
+}
+
+function applyFilters() {
+  var src = document.getElementById('f-source').value;
+  var cust = document.getElementById('f-custody').value;
+  var sex = document.getElementById('f-sex').value;
+  var race = document.getElementById('f-race').value;
+  var mug = document.getElementById('f-mug').value;
+  var charge = document.getElementById('f-charge').value.toLowerCase();
+  var court = document.getElementById('f-court').value.toLowerCase();
+  filtered = RECORDS.filter(function(r) {
+    if (src && r.source !== src) return false;
+    if (cust === 'held' && r.releaseDate) return false;
+    if (cust === 'released' && !r.releaseDate) return false;
+    if (sex && r.sex !== sex) return false;
+    if (race && r.race !== race) return false;
+    if (mug === 'yes' && !r.mugshot) return false;
+    if (mug === 'no' && r.mugshot) return false;
+    if (charge) {
+      var ok = false;
+      for (var i = 0; i < r.charges.length; i++) {
+        if ((r.charges[i].description || '').toLowerCase().indexOf(charge) > -1) { ok = true; break; }
+      }
+      if (!ok) return false;
+    }
+    if (court) {
+      var ok2 = false;
+      for (var i = 0; i < r.courtHistory.length; i++) {
+        if ((r.courtHistory[i].court || '').toLowerCase().indexOf(court) > -1) { ok2 = true; break; }
+      }
+      if (!ok2) return false;
+    }
+    return true;
+  });
+  currentIdx = 0;
+  updateCounter();
+  if (document.getElementById('browse').classList.contains('active')) render();
+}
+
+function updateCounter() {
+  document.getElementById('counter').textContent = (filtered.length ? (currentIdx + 1) : 0) + ' / ' + filtered.length;
+  document.getElementById('prev-btn').disabled = currentIdx <= 0;
+  document.getElementById('next-btn').disabled = currentIdx >= filtered.length - 1;
+}
+
+function render() {
+  var r = filtered[currentIdx];
+  var mugWrap = document.getElementById('mugshot-wrap');
+  if (r && r.mugshot) {
+    var gi = RECORDS.indexOf(r);
+    var url = mugshotURLs[gi] || r.mugshot;
+    mugWrap.innerHTML = '<img src="' + esc(url) + '" alt="mugshot" />';
+  } else {
+    mugWrap.innerHTML = '<div class="nomug">No mugshot</div>';
+  }
+  if (!r) {
+    document.getElementById('id-info').innerHTML = '<div class="id-row"><div class="id-label">No records</div></div>';
+    document.getElementById('charges-list').innerHTML = '';
+    document.getElementById('court-history-list').innerHTML = '';
+    return;
+  }
+  var idHTML = '';
+  idHTML += '<div class="id-row id-name"><div class="id-label">Name</div><div class="id-value">' + esc(r.name) + '</div></div>';
+  idHTML += '<div class="id-row"><div class="id-label">Source</div><div class="id-value"><span class="badge badge-source ' + SOURCE_CLASSES[r.source] + '">' + esc(SOURCE_LABELS[r.source] || r.source) + '</span></div></div>';
+  idHTML += '<div class="id-row"><div class="id-label">ID #</div><div class="id-value">' + esc(r.id) + '</div></div>';
+  idHTML += '<div class="id-row"><div class="id-label">Status</div><div class="id-value"><span class="badge ' + (r.releaseDate ? 'badge-released">Released ' + esc(fmtDate(r.releaseDate)) : 'badge-held">In custody') + '</span></div></div>';
+  if (r.bookDate) idHTML += '<div class="id-row"><div class="id-label">Booked</div><div class="id-value">' + esc(fmtDate(r.bookDate)) + '</div></div>';
+  if (r.dob) idHTML += '<div class="id-row"><div class="id-label">DOB/Age</div><div class="id-value">' + esc(r.dob) + '</div></div>';
+  if (r.sex) idHTML += '<div class="id-row"><div class="id-label">Sex</div><div class="id-value">' + esc(r.sex) + '</div></div>';
+  if (r.race) idHTML += '<div class="id-row"><div class="id-label">Race</div><div class="id-value">' + esc(r.race) + '</div></div>';
+  if (r.county) idHTML += '<div class="id-row"><div class="id-label">County</div><div class="id-value">' + esc(r.county) + '</div></div>';
+  document.getElementById('id-info').innerHTML = idHTML;
+
+  var chHTML = '';
+  if (r.charges.length === 0) chHTML = '<div style="color:#8b949e;padding:10px;">No charges listed</div>';
+  r.charges.forEach(function(c) {
+    var grade = '';
+    var desc = (c.description || '').toUpperCase();
+    if (desc.indexOf('FELONY') > -1 || desc.indexOf('MURDER') > -1) grade = 'grade-felony-a';
+    else if (desc.indexOf('ASSAULT') > -1 || desc.indexOf('ROBBERY') > -1) grade = 'grade-felony-b';
+    else if (desc.indexOf('MISDEMEANOR') > -1 || desc.indexOf('PETIT') > -1) grade = 'grade-misd';
+    chHTML += '<div class="charge-card ' + grade + '">';
+    chHTML += '<div class="charge-title">' + esc(c.description || '') + '</div>';
+    var meta = [];
+    if (c.docketNumber) meta.push('<span><b>Docket:</b> ' + esc(c.docketNumber) + '</span>');
+    if (c.offenseDate) meta.push('<span><b>Offense:</b> ' + esc(c.offenseDate) + '</span>');
+    if (c.disposition) meta.push('<span><b>Disposition:</b> ' + esc(c.disposition) + '</span>');
+    if (c.sentenceDate) meta.push('<span><b>Sentenced:</b> ' + esc(c.sentenceDate) + '</span>');
+    if (c.sentenceLength) meta.push('<span><b>Sentence:</b> ' + esc(c.sentenceLength) + '</span>');
+    if (c.arrestingAgency) meta.push('<span><b>Agency:</b> ' + esc(c.arrestingAgency) + '</span>');
+    if (meta.length) chHTML += '<div class="charge-meta">' + meta.join('') + '</div>';
+    chHTML += '</div>';
+  });
+  if (r.bonds && r.bonds.length) {
+    chHTML += '<div class="bond-section-title">Bonds</div>';
+    r.bonds.forEach(function(b) {
+      chHTML += '<div class="bond-card">' + esc(b.bondType || b.type || '') + ' — ' + esc(b.bondAmount || b.amount || '') + '</div>';
+    });
+  }
+  document.getElementById('charges-list').innerHTML = chHTML;
+
+  var crHTML = '';
+  if (!r.courtHistory || !r.courtHistory.length) crHTML = '<div style="color:#8b949e;padding:10px;font-size:11px;">No court history</div>';
+  (r.courtHistory || []).forEach(function(ci) {
+    crHTML += '<div class="court-card">';
+    crHTML += '<div class="court-name">' + esc(ci.court || '') + '</div>';
+    if (ci.courtDate) crHTML += '<div class="court-date">' + esc(ci.courtDate) + '</div>';
+    if (ci.chargeRefs) crHTML += '<div class="charge-refs">Charges: ' + esc(ci.chargeRefs) + '</div>';
+    crHTML += '</div>';
+  });
+  document.getElementById('court-history-list').innerHTML = crHTML;
+
+  if (r.id) history.replaceState(null, '', '?id=' + encodeURIComponent(r.id));
+}
+
+function renderLanding() {
+  // Source cards
+  var bySource = {};
+  SOURCE_KEYS.forEach(function(k) {
+    var label = k.charAt(0).toUpperCase() + k.slice(1);
+    bySource[k] = { total: 0, held: 0, label: label };
+  });
+  var inv = { RRJ: 'rrj', Henrico: 'henrico', Richmond: 'richmond', Pamunkey: 'pamunkey', Peninsula: 'peninsula', Arlington: 'arlington' };
+  RECORDS.forEach(function(r) {
+    var k = inv[r.source]; if (!k) return;
+    bySource[k].total++;
+    if (!r.releaseDate) bySource[k].held++;
+  });
+  var srcHTML = '';
+  SOURCE_KEYS.forEach(function(k) {
+    var s = bySource[k];
+    var src = Object.keys(inv).filter(function(x) { return inv[x] === k; })[0] || k;
+    srcHTML += '<div class="source-card">';
+    srcHTML += '<h3><span class="badge badge-source ' + SOURCE_CLASSES[src] + '">' + esc(SOURCE_LABELS[src] || src) + '</span></h3>';
+    srcHTML += '<div class="count">' + s.total + '</div>';
+    srcHTML += '<div class="held">' + s.held + ' in custody</div>';
+    srcHTML += '</div>';
+  });
+  document.getElementById('source-cards').innerHTML = srcHTML;
+  document.getElementById('source-count').textContent = SOURCE_KEYS.filter(function(k) { return bySource[k].total > 0; }).length;
+
+  // Recent mugs — top 24 by parseDate(bookDate) with mugshot
+  var withMug = RECORDS.filter(function(r) { return r.mugshot && !r.releaseDate; }).slice(0, 24);
+  var rmHTML = '';
+  withMug.forEach(function(r) {
+    var gi = RECORDS.indexOf(r);
+    var url = mugshotURLs[gi] || r.mugshot;
+    rmHTML += '<div class="recent-card" data-id="' + esc(r.id) + '">';
+    rmHTML += '<div class="mug">' + (r.mugshot ? '<img src="' + esc(url) + '" alt="" />' : '<div class="nomug">No mugshot</div>') + '</div>';
+    rmHTML += '<div class="rc-meta">';
+    rmHTML += '<div class="rc-name">' + esc(r.name) + '</div>';
+    rmHTML += '<div class="rc-date">' + esc(SOURCE_LABELS[r.source] || r.source) + ' · ' + esc(fmtDate(r.bookDate)) + '</div>';
+    rmHTML += '</div></div>';
+  });
+  document.getElementById('recent-mugs').innerHTML = rmHTML;
+  document.querySelectorAll('#recent-mugs .recent-card').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var id = el.getAttribute('data-id');
+      showBrowse();
+      goToRecord(id);
+    });
+  });
+}
+
+function showHome() {
+  document.getElementById('landing').classList.add('active');
+  document.getElementById('browse').classList.remove('active');
+  document.getElementById('btn-home').classList.add('active');
+  document.getElementById('btn-browse').classList.remove('active');
+  renderLanding();
+}
+function showBrowse() {
+  document.getElementById('landing').classList.remove('active');
+  document.getElementById('browse').classList.add('active');
+  document.getElementById('btn-home').classList.remove('active');
+  document.getElementById('btn-browse').classList.add('active');
+  render();
+}
+
+function goToRecord(id) {
+  for (var i = 0; i < filtered.length; i++) {
+    if (String(filtered[i].id) === String(id)) {
+      currentIdx = i;
+      updateCounter();
+      render();
+      return true;
+    }
+  }
+  // Not in filtered — clear filters and try again
+  document.getElementById('f-source').value = '';
+  document.getElementById('f-custody').value = '';
+  applyFilters();
+  for (var i = 0; i < filtered.length; i++) {
+    if (String(filtered[i].id) === String(id)) {
+      currentIdx = i;
+      updateCounter();
+      render();
+      return true;
+    }
+  }
+  return false;
+}
+
+function handleDeepLink() {
+  var m = location.search.match(/[?&]id=([^&]+)/);
+  if (m) {
+    showBrowse();
+    goToRecord(decodeURIComponent(m[1]));
+  }
+}
+
+// Event wiring
+document.getElementById('btn-home').addEventListener('click', showHome);
+document.getElementById('btn-browse').addEventListener('click', showBrowse);
+document.getElementById('filter-toggle').addEventListener('click', function() {
+  document.getElementById('filter-bar').classList.toggle('open');
+  this.classList.toggle('active');
+});
+['f-source','f-custody','f-sex','f-race','f-mug','f-charge','f-court'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', applyFilters);
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+document.getElementById('prev-btn').addEventListener('click', function() {
+  if (currentIdx > 0) { currentIdx--; updateCounter(); render(); }
+});
+document.getElementById('next-btn').addEventListener('click', function() {
+  if (currentIdx < filtered.length - 1) { currentIdx++; updateCounter(); render(); }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowLeft') document.getElementById('prev-btn').click();
+  if (e.key === 'ArrowRight') document.getElementById('next-btn').click();
+});
+document.getElementById('jump-btn').addEventListener('click', function() {
+  var v = document.getElementById('jump-input').value.trim();
+  if (v) { showBrowse(); goToRecord(v); }
+});
+document.getElementById('jump-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('jump-btn').click();
+});
+
+// Search
+var searchTimer;
+document.getElementById('search').addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(doSearch, 200);
+});
+function doSearch() {
+  var q = document.getElementById('search').value.trim().toLowerCase();
+  var results = document.getElementById('search-results');
+  if (!q) { results.style.display = 'none'; return; }
+  var matches = [];
+  for (var i = 0; i < RECORDS.length && matches.length < 30; i++) {
+    var r = RECORDS[i];
+    if ((r.name || '').toLowerCase().indexOf(q) > -1 || String(r.id).toLowerCase().indexOf(q) > -1) {
+      matches.push(r);
+    }
+  }
+  if (!matches.length) { results.style.display = 'none'; return; }
+  results.innerHTML = matches.map(function(r) {
+    return '<div class="sr-item" data-id="' + esc(r.id) + '"><div>' + esc(r.name) + '</div><div class="sr-src">' + esc(SOURCE_LABELS[r.source] || r.source) + ' · ' + esc(r.id) + '</div></div>';
+  }).join('');
+  results.style.display = 'block';
+  results.querySelectorAll('.sr-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      results.style.display = 'none';
+      document.getElementById('search').value = '';
+      showBrowse();
+      goToRecord(el.getAttribute('data-id'));
+    });
+  });
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#search-wrap')) document.getElementById('search-results').style.display = 'none';
+});
+</script>
+</body>
+</html>
