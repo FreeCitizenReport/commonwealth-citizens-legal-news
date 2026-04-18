@@ -266,6 +266,7 @@ function normalizeSimple(arr, src) {
       courtHistory: r.courtHistory || [],
       county: r.county || r.address || '',
       source: src,
+      firstSeenAt: r.firstSeenAt || '',
       _raw: r
     };
   });
@@ -296,6 +297,7 @@ function normalizeHenrico(arr) {
       courtHistory: r.courtHistory || [],
       county: r.county || 'Henrico County',
       source: 'Henrico',
+      firstSeenAt: r.firstSeenAt || '',
       _raw: r
     };
   });
