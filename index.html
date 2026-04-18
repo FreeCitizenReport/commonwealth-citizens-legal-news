@@ -283,12 +283,12 @@ function normalizeHenrico(arr) {
       name = last + ', ' + parts.join(' ');
     }
     return {
-      id: r.id || r.bookingNum || '',
+      id: r.id || r.bookingNum || r.inmateId || '',
       name: name,
       dob: r.dob || '',
       sex: r.sex || '',
       race: r.race || '',
-      bookDate: fmtDate(r.bookDate || r.commitmentDate || ''),
+      bookDate: fmtDate(r.bookDate || r.commitmentDate || r.bookingDate || ''),
       releaseDate: fmtDate(r.releaseDate || ''),
       charges: (r.charges || []).map(function(c) { return typeof c === 'string' ? { description: c } : c; }),
       bonds: r.bonds || [],
