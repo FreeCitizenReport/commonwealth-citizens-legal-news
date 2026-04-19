@@ -121,6 +121,8 @@ a:hover { text-decoration: underline; }
     .court-card .court-detail { margin-top: 6px; padding-top: 6px; border-top: 1px solid #30363d; font-size: 10.5px; color: #c9d1d9; line-height: 1.45; }
     .court-card .cd-row { padding: 1px 0; }
     .court-card .cd-lbl { color: #8b949e; font-weight: 600; display: inline-block; min-width: 92px; margin-right: 6px; }
+    .court-card .cd-pending { color: #8b949e; font-style: italic; }
+    .court-card .cd-note { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #30363d; color: #6e7681; font-size: 10px; font-style: italic; }
 
 #ad-panel { max-width: 1600px; margin: 12px auto 20px; padding: 0 12px; }
 #ad-panel .ad-box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; text-align: center; font-size: 12px; color: #8b949e; }
@@ -468,6 +470,19 @@ var COURT_LABELS = {
   };
   function courtLabel(code){ if(!code) return ''; return COURT_LABELS[code] || code; }
   function courtLevelLabel(lv){ if(!lv) return ''; if(lv==='G') return 'General District Court'; if(lv==='C') return 'Circuit Court'; if(lv==='J') return 'Juvenile & Domestic Relations'; return lv; }
+  var DISP_LABELS = {
+    'G':'Guilty','GA':'Guilty (Alford)','GJ':'Guilty (Jury)','GR':'Guilty in Absentia',
+    'N':'Not Guilty','NG':'Not Guilty',
+    'D':'Dismissed','DWP':'Dismissed With Prejudice','DNP':'Dismissed Without Prejudice',
+    'NP':'Nolle Prosequi','R':'Nolle Prosequi',
+    'REV':'Reversed','REM':'Remanded','RES':'Restored','REF':'Referred',
+    'CM':'Committed','CL':'Closed','CT':'Continued',
+    'A':'Amended','AW':'Amended & Withdrawn',
+    'PP':'Prepaid','FF':'Fine Forfeited','FW':'Fine Waived',
+    'TR':'Transferred','W':'Withdrawn','X':'Disposed/Other',
+    'BF':'Bond Forfeited','BE':'Bond Executed','EX':'Expunged','S':'Sentenced'
+  };
+  function dispLabel(d){ if(!d) return ''; if (DISP_LABELS[d]) return DISP_LABELS[d]; return d; }
   window.__ccToggle = function(id){ var d=document.getElementById(id); if(d) d.style.display = d.style.display==='block' ? 'none' : 'block'; };
   function render() {
   var r = filtered[currentIdx];
@@ -532,7 +547,7 @@ var COURT_LABELS = {
     var _cc = (ci.court || '');
     var _cl = courtLabel(_cc);
     var _od = ci.offenseDate || ci.courtDate || '';
-    var _dd = ci.dispositionDesc || '';
+    var _dd = dispLabel(ci.dispositionDesc || '');
     var _cs = ci.codeSection || '';
     var _cn = ci.formattedCaseNum || ci.caseTrackingID || '';
     var _sn = ci.sentence || '';
@@ -553,10 +568,12 @@ var COURT_LABELS = {
     if (_cs) crHTML += '<div class="cd-row"><span class="cd-lbl">Va. Code</span>' + esc(_cs) + '</div>';
     if (_od) crHTML += '<div class="cd-row"><span class="cd-lbl">Offense Date</span>' + esc(_od) + '</div>';
     if (_cd) crHTML += '<div class="cd-row"><span class="cd-lbl">Charge</span>' + esc(_cd) + '</div>';
-    if (_dd) crHTML += '<div class="cd-row"><span class="cd-lbl">Disposition</span>' + esc(_dd) + '</div>';
-    if (ci.dispositionDate) crHTML += '<div class="cd-row"><span class="cd-lbl">Disposed</span>' + esc(ci.dispositionDate) + '</div>';
-    if (_sn) crHTML += '<div class="cd-row"><span class="cd-lbl">Sentence</span>' + esc(_sn) + '</div>';
+    crHTML += '<div class="cd-row"><span class="cd-lbl">Disposition</span>' + (_dd ? esc(_dd) : '<span class="cd-pending">Pending</span>') + '</div>';
+    crHTML += '<div class="cd-row"><span class="cd-lbl">Disposed</span>' + (ci.dispositionDate ? esc(ci.dispositionDate) : '<span class="cd-pending">—</span>') + '</div>';
+    crHTML += '<div class="cd-row"><span class="cd-lbl">Sentence</span>' + (_sn ? esc(_sn) : (_dd ? '<span class="cd-pending">None</span>' : '<span class="cd-pending">Pending</span>')) + '</div>';
+    if (ci.defendantDOB) crHTML += '<div class="cd-row"><span class="cd-lbl">DOB</span>' + esc(ci.defendantDOB) + '</div>';
     if (ci.defendantName) crHTML += '<div class="cd-row"><span class="cd-lbl">Defendant</span>' + esc(ci.defendantName) + '</div>';
+    crHTML += '<div class="cd-note">Attorney, judge, and hearing history not yet in this dataset.</div>';
     crHTML += '</div>';
     crHTML += '</div>';
   });
