@@ -323,14 +323,22 @@ function progress() {
 }
 
 function finalizeLoad() {
-  // Sort: in-custody first, with-mugshot first, newest firstSeenAt first (bookDate tiebreaker). See SORT_RULE.md.
-  RECORDS.sort(function(a, b) {
-    var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
-    if (ar !== br) return ar - br;
-    var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
-    if (am !== bm) return am - bm;
-    var fa = a.firstSeenAt || '', fb = b.firstSeenAt || ''; if (fa && fb && fa !== fb) return fb < fa ? -1 : 1; if (fa && !fb) return -1; if (!fa && fb) return 1; return parseDate(b.bookDate) - parseDate(a.bookDate);
-  });
+  // Sort: in-custody first, then with-mugshot, then most recent bookDate first.
+    // Tiebreakers: mugshotDate (newer first), then name (A-Z) for stability.
+    // DO NOT reintroduce firstSeenAt as a primary key — it is corrupted whenever a
+    // new source is added (every ingested record gets today's timestamp). See SORT_RULE.md.
+    RECORDS.sort(function(a, b) {
+      var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
+      if (ar !== br) return ar - br;
+      var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
+      if (am !== bm) return am - bm;
+      var bd = parseDate(b.bookDate) - parseDate(a.bookDate);
+      if (bd) return bd;
+      var amd = a.mugshotDate || "", bmd = b.mugshotDate || "";
+      if (amd !== bmd) return bmd < amd ? -1 : 1;
+      var an = (a.name || "").toUpperCase(), bn = (b.name || "").toUpperCase();
+      return an < bn ? -1 : an > bn ? 1 : 0;
+    });
   document.getElementById('loading').classList.add('done');
   buildFilters();
   applyFilters();
