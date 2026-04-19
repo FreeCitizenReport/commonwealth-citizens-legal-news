@@ -116,6 +116,11 @@ a:hover { text-decoration: underline; }
 .court-card .court-name { font-weight: 600; color: #f0f6fc; margin-bottom: 2px; }
 .court-card .court-date { color: #8b949e; }
 .court-card .charge-refs { color: #58a6ff; font-size: 10px; margin-top: 2px; }
+    .court-card { cursor: pointer; transition: background 0.12s; }
+    .court-card:hover { background: #131a24; }
+    .court-card .court-detail { margin-top: 6px; padding-top: 6px; border-top: 1px solid #30363d; font-size: 10.5px; color: #c9d1d9; line-height: 1.45; }
+    .court-card .cd-row { padding: 1px 0; }
+    .court-card .cd-lbl { color: #8b949e; font-weight: 600; display: inline-block; min-width: 92px; margin-right: 6px; }
 
 #ad-panel { max-width: 1600px; margin: 12px auto 20px; padding: 0 12px; }
 #ad-panel .ad-box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; text-align: center; font-size: 12px; color: #8b949e; }
@@ -450,7 +455,21 @@ function updateCounter() {
   document.getElementById('next-btn').disabled = currentIdx >= filtered.length - 1;
 }
 
-function render() {
+var COURT_LABELS = {
+    '020G':'Chesterfield GDC','020C':'Chesterfield Circuit','020J':'Chesterfield JDR',
+    '036G':'Goochland GDC','036C':'Goochland Circuit',
+    '041G':'Hanover GDC','041C':'Hanover Circuit','041J':'Hanover JDR',
+    '064G':'New Kent GDC','064C':'New Kent Circuit',
+    '073G':'Powhatan GDC','073C':'Powhatan Circuit',
+    '087G':'Henrico GDC','087C':'Henrico Circuit','087J':'Henrico JDR',
+    '095G':'Spotsylvania GDC','099G':'Stafford GDC',
+    '760G':'Richmond City GDC','760C':'Richmond City Circuit','760J':'Richmond City JDR',
+    '790G':'Staunton GDC','810G':'Virginia Beach GDC','540G':'Norfolk GDC'
+  };
+  function courtLabel(code){ if(!code) return ''; return COURT_LABELS[code] || code; }
+  function courtLevelLabel(lv){ if(!lv) return ''; if(lv==='G') return 'General District Court'; if(lv==='C') return 'Circuit Court'; if(lv==='J') return 'Juvenile & Domestic Relations'; return lv; }
+  window.__ccToggle = function(id){ var d=document.getElementById(id); if(d) d.style.display = d.style.display==='block' ? 'none' : 'block'; };
+  function render() {
   var r = filtered[currentIdx];
   var mugWrap = document.getElementById('mugshot-wrap');
   if (r && r.mugshot) {
@@ -508,11 +527,37 @@ function render() {
 
   var crHTML = '';
   if (!r.courtHistory || !r.courtHistory.length) crHTML = '<div style="color:#8b949e;padding:10px;font-size:11px;">No court history</div>';
-  (r.courtHistory || []).forEach(function(ci) {
-    crHTML += '<div class="court-card">';
-    crHTML += '<div class="court-name">' + esc(ci.court || '') + '</div>';
-    if (ci.courtDate) crHTML += '<div class="court-date">' + esc(ci.courtDate) + '</div>';
-    if (ci.chargeRefs) crHTML += '<div class="charge-refs">Charges: ' + esc(ci.chargeRefs) + '</div>';
+  (r.courtHistory || []).forEach(function(ci, ciIdx) {
+    var _cd = (ci.chargeDesc || '');
+    var _cc = (ci.court || '');
+    var _cl = courtLabel(_cc);
+    var _od = ci.offenseDate || ci.courtDate || '';
+    var _dd = ci.dispositionDesc || '';
+    var _cs = ci.codeSection || '';
+    var _cn = ci.formattedCaseNum || ci.caseTrackingID || '';
+    var _sn = ci.sentence || '';
+    var _lv = courtLevelLabel(ci.courtLevel || (_cc ? _cc.slice(-1) : ''));
+    var _did = 'cdet_' + (r.id || 'x') + '_' + ciIdx;
+    crHTML += '<div class="court-card" onclick="__ccToggle(\''+_did+'\')">';
+    crHTML += '<div class="court-name">' + esc(_cd || _cl || _cc || 'Case') + '</div>';
+    var _meta = [];
+    if (_od) _meta.push(esc(_od));
+    if (_cl) _meta.push(esc(_cl));
+    if (_cs) _meta.push('\u00A7 ' + esc(_cs));
+    if (_meta.length) crHTML += '<div class="court-date">' + _meta.join(' &middot; ') + '</div>';
+    if (_dd) crHTML += '<div class="charge-refs">' + esc(_dd) + '</div>';
+    crHTML += '<div id="'+_did+'" class="court-detail" style="display:none">';
+    if (_cn) crHTML += '<div class="cd-row"><span class="cd-lbl">Case #</span>' + esc(_cn) + '</div>';
+    if (_cl || _cc) crHTML += '<div class="cd-row"><span class="cd-lbl">Court</span>' + esc(_cl || _cc) + (_cl && _cc ? ' (' + esc(_cc) + ')' : '') + '</div>';
+    if (_lv) crHTML += '<div class="cd-row"><span class="cd-lbl">Court Level</span>' + esc(_lv) + '</div>';
+    if (_cs) crHTML += '<div class="cd-row"><span class="cd-lbl">Va. Code</span>' + esc(_cs) + '</div>';
+    if (_od) crHTML += '<div class="cd-row"><span class="cd-lbl">Offense Date</span>' + esc(_od) + '</div>';
+    if (_cd) crHTML += '<div class="cd-row"><span class="cd-lbl">Charge</span>' + esc(_cd) + '</div>';
+    if (_dd) crHTML += '<div class="cd-row"><span class="cd-lbl">Disposition</span>' + esc(_dd) + '</div>';
+    if (ci.dispositionDate) crHTML += '<div class="cd-row"><span class="cd-lbl">Disposed</span>' + esc(ci.dispositionDate) + '</div>';
+    if (_sn) crHTML += '<div class="cd-row"><span class="cd-lbl">Sentence</span>' + esc(_sn) + '</div>';
+    if (ci.defendantName) crHTML += '<div class="cd-row"><span class="cd-lbl">Defendant</span>' + esc(ci.defendantName) + '</div>';
+    crHTML += '</div>';
     crHTML += '</div>';
   });
   document.getElementById('court-history-list').innerHTML = crHTML;
