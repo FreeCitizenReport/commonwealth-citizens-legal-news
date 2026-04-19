@@ -323,19 +323,27 @@ function progress() {
 }
 
 function finalizeLoad() {
-  // Sort: in-custody first, then with-mugshot, then most recent bookDate first.
-    // Tiebreakers: mugshotDate (newer first), then name (A-Z) for stability.
-    // DO NOT reintroduce firstSeenAt as a primary key — it is corrupted whenever a
-    // new source is added (every ingested record gets today's timestamp). See SORT_RULE.md.
+  // Sort rule (canonical — see SORT_RULE.md, confirmed by Van 2026-04-18):
+    //   Rule 1: Records without a mugshot are EXCLUDED from the feed entirely.
+    //           (Filter, not sort — they do not rank last, they are not shown.)
+    //   Rule 2: Custody status is IRRELEVANT to ordering. Released and in-custody intermix.
+    //   Rule 3: Primary key is retrievedAt DESC, where
+    //             retrievedAt = min(firstSeenAt, bookDate + 24h).
+    //           The 24h clamp protects against new-source onboarding, which otherwise
+    //           stamps firstSeenAt = now on stale bookings and pushes them to the top.
+    //   Rule 4: Tiebreakers (rare): bookDate DESC, then name A-Z for stability.
+    RECORDS = RECORDS.filter(function(r) { return r.mugshot; });
     RECORDS.sort(function(a, b) {
-      var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
-      if (ar !== br) return ar - br;
-      var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
-      if (am !== bm) return am - bm;
-      var bd = parseDate(b.bookDate) - parseDate(a.bookDate);
+      var fa = a.firstSeenAt ? Date.parse(a.firstSeenAt) : NaN;
+      var fb = b.firstSeenAt ? Date.parse(b.firstSeenAt) : NaN;
+      var ba = parseDate(a.bookDate), bb = parseDate(b.bookDate);
+      var capA = isNaN(ba) ? Infinity : ba + 86400000;
+      var capB = isNaN(bb) ? Infinity : bb + 86400000;
+      var ra = isNaN(fa) ? (isNaN(ba) ? 0 : ba) : Math.min(fa, capA);
+      var rb = isNaN(fb) ? (isNaN(bb) ? 0 : bb) : Math.min(fb, capB);
+      if (ra !== rb) return rb - ra;
+      var bd = (isNaN(bb) ? 0 : bb) - (isNaN(ba) ? 0 : ba);
       if (bd) return bd;
-      var amd = a.mugshotDate || "", bmd = b.mugshotDate || "";
-      if (amd !== bmd) return bmd < amd ? -1 : 1;
       var an = (a.name || "").toUpperCase(), bn = (b.name || "").toUpperCase();
       return an < bn ? -1 : an > bn ? 1 : 0;
     });
@@ -539,7 +547,7 @@ function renderLanding() {
   document.getElementById('source-count').textContent = SOURCE_KEYS.filter(function(k) { return bySource[k].total > 0; }).length;
 
   // Recent mugs — top 24 by parseDate(bookDate) with mugshot
-  var withMug = RECORDS.filter(function(r) { return r.mugshot && !r.releaseDate; }).slice(0, 100);
+  var withMug = RECORDS.filter(function(r) { return r.mugshot; }).slice(0, 100);
   var rmHTML = '';
   withMug.forEach(function(r) {
     var gi = RECORDS.indexOf(r);

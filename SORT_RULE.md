@@ -1,42 +1,69 @@
-# Commonwealth Citizens Legal News — SORT RULE (canonical, do not change without Van's sign-off)
+# Commonwealth Citizens Legal News — SORT RULE
 
-The main landing list and all filtered views MUST sort in this exact order:
+Canonical rule set, confirmed by Van 2026-04-18. Do NOT change without Van's explicit sign-off.
 
-1. **In-custody first**, released last. A record is released iff `releaseDate` is a non-empty string.
-2. **With mugshot first**, without-mugshot last.
-3. **Most recent `bookDate` first** (MM/DD/YYYY parsed via `parseDate`). This is the PRIMARY ordering key.
-4. Tiebreaker when bookDates are identical: **more recent `mugshotDate` first** (ISO 8601 string compare).
-5. Final tiebreaker for stability: **name alphabetically (A–Z)**.
+## The four rules
 
-## DO NOT use `firstSeenAt` as a primary or secondary sort key.
+**Rule 1 — Mugshot is a FILTER, not a sort bucket.** Records without a mugshot are excluded
+from the feed entirely. They do not rank last; they are not shown at all. A record joins
+the feed only once it has a photo.
 
-`firstSeenAt` records the moment the Commonwealth aggregator first ingested a record.
-When a new source is onboarded (e.g. Peninsula was added 2026-04-18), every record it
-ingests — regardless of how old the actual booking is — gets `firstSeenAt = today`. This
-pushes stale, old-mugshot records above fresh same-day bookings.
+**Rule 2 — Custody status is irrelevant to ordering.** Released and in-custody records
+intermix freely. (Users may filter by custody on the Browse page, but sort order itself
+is custody-agnostic.)
 
-The canonical symptom of this regression: **FARMER, CLIFTON (bookDate 04/13/2026) appearing
-above PRESSLEY, ALEX (bookDate 04/18/2026)** on the landing page on 2026-04-18, because
-FARMER was first-seen 13 minutes after PRESSLEY when the Peninsula source came online.
+**Rule 3 — Primary sort key: `retrievedAt` DESCENDING.** Most recently retrieved at top.
+At sort time we compute:
+
+    retrievedAt = min(firstSeenAt, bookDate + 24h)
+
+The 24h clamp guards against new-source onboarding, which stamps `firstSeenAt = now`
+on every ingested record regardless of how old the booking is. Without the clamp, a
+5-day-old booking retrieved today for the first time would outrank a booking that
+actually happened today. The clamp caps every record's retrievedAt at 24h after its
+bookDate — the latest plausible moment a well-behaved scraper would have retrieved
+it on the original booking day.
+
+**Rule 4 — Tiebreakers** apply only when retrievedAt values are literally equal (rare —
+these are second-precision timestamps): (a) bookDate DESC, (b) name A-Z alphabetically
+for stability.
+
+## Data-layer corollary
+
+The clamp is a viewer-side guard. The source of truth is `firstSeenAt` in each jail's
+`data.json`. Whenever a new jail source is onboarded, the scraper MUST backfill
+`firstSeenAt` on pre-existing records to match `bookDate`, not the onboarding timestamp.
+See the `peninsula-viewer` repo for the backfill pattern.
 
 ## Canonical comparator
 
 ```js
+RECORDS = RECORDS.filter(function(r) { return r.mugshot; });
 RECORDS.sort(function(a, b) {
-  var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
-  if (ar !== br) return ar - br;
-  var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
-  if (am !== bm) return am - bm;
-  var bd = parseDate(b.bookDate) - parseDate(a.bookDate);
+  var fa = a.firstSeenAt ? Date.parse(a.firstSeenAt) : NaN;
+  var fb = b.firstSeenAt ? Date.parse(b.firstSeenAt) : NaN;
+  var ba = parseDate(a.bookDate), bb = parseDate(b.bookDate);
+  var capA = isNaN(ba) ? Infinity : ba + 86400000;
+  var capB = isNaN(bb) ? Infinity : bb + 86400000;
+  var ra = isNaN(fa) ? (isNaN(ba) ? 0 : ba) : Math.min(fa, capA);
+  var rb = isNaN(fb) ? (isNaN(bb) ? 0 : bb) : Math.min(fb, capB);
+  if (ra !== rb) return rb - ra;
+  var bd = (isNaN(bb) ? 0 : bb) - (isNaN(ba) ? 0 : ba);
   if (bd) return bd;
-  var amd = a.mugshotDate || "", bmd = b.mugshotDate || "";
-  if (amd !== bmd) return bmd < amd ? -1 : 1;
   var an = (a.name || "").toUpperCase(), bn = (b.name || "").toUpperCase();
   return an < bn ? -1 : an > bn ? 1 : 0;
 });
 ```
 
+## Canonical symptom of regressions
+
+If FARMER, CLIFTON (Peninsula bookDate 04/13/2026) appears above PRESSLEY, ALEX
+(Peninsula bookDate 04/18/2026) on 2026-04-18, the clamp or the upstream `firstSeenAt`
+backfill is broken.
+
 ## History
-- `1229ac1d` initial scaffold (bookDate sort).
-- `8345feae` regressed to `firstSeenAt` primary with `bookDate` tiebreaker — this is the bug.
-- Fix (this commit): restored `bookDate` primary; added `mugshotDate` + name tiebreakers; added this rule file.
+
+- `1229ac1d` (2026-04-18): initial scaffold — simple bookDate DESC.
+- `8345feae` (2026-04-18): introduced firstSeenAt as primary key — corrupted by Peninsula onboarding.
+- `19e270b3` (2026-04-18): reverted to bookDate DESC. Wrong rule per Van — retrievedAt should be primary.
+- (this commit) (2026-04-18): retrievedAt DESC with 24h clamp + mugshot filter + custody-agnostic. Confirmed.
