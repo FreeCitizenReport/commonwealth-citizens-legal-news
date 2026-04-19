@@ -681,5 +681,76 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('#search-wrap')) document.getElementById('search-results').style.display = 'none';
 });
 </script>
+<!-- LAST_SEEN_ENHANCEMENT_V1_START -->
+<style>
+.source-card .last-seen {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75em;
+  opacity: 0.75;
+  font-weight: 400;
+  line-height: 1.3;
+}
+.source-card .last-seen .ls-strong { font-weight: 600; }
+</style>
+<script>
+(function(){
+  var SOURCE_FOR_HEADING = {
+    "Riverside Regional Jail": "RRJ",
+    "Henrico County": "Henrico",
+    "Richmond City": "Richmond",
+    "Pamunkey Regional": "Pamunkey",
+    "Peninsula Regional": "Peninsula",
+    "Arlington County": "Arlington"
+  };
+  function relTime(iso) {
+    if (!iso) return "never";
+    var then = new Date(iso).getTime();
+    if (isNaN(then)) return "unknown";
+    var diffMs = Date.now() - then;
+    var mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return mins + "m ago";
+    var hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + "h ago";
+    var days = Math.floor(hours / 24);
+    if (days < 7) return days + "d ago";
+    return new Date(iso).toLocaleDateString();
+  }
+  function stamp() {
+    if (typeof RECORDS === "undefined" || !RECORDS || !RECORDS.length) { setTimeout(stamp, 500); return; }
+    var maxBySource = {};
+    for (var i = 0; i < RECORDS.length; i++) {
+      var r = RECORDS[i];
+      var s = r.source;
+      var fs = r.firstSeenAt || "";
+      if (!s || !fs) continue;
+      if (!maxBySource[s] || fs > maxBySource[s]) maxBySource[s] = fs;
+    }
+    var cards = document.querySelectorAll(".source-card");
+    cards.forEach(function(card){
+      var h = card.querySelector("h1, h2, h3, h4, span");
+      if (!h) return;
+      var heading = h.textContent.trim();
+      var source = SOURCE_FOR_HEADING[heading];
+      if (!source) return;
+      var maxFs = maxBySource[source];
+      if (!maxFs) return;
+      var existing = card.querySelector(".last-seen");
+      if (existing) existing.remove();
+      var div = document.createElement("div");
+      div.className = "last-seen";
+      div.innerHTML = "Latest new booking: <span class=\"ls-strong\">" + relTime(maxFs) + "</span>";
+      card.appendChild(div);
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function(){ setTimeout(stamp, 800); });
+  } else {
+    setTimeout(stamp, 800);
+  }
+})();
+</script>
+<!-- LAST_SEEN_ENHANCEMENT_V1_END -->
 </body>
 </html>
