@@ -123,6 +123,8 @@ a:hover { text-decoration: underline; }
     .court-card .cd-lbl { color: #8b949e; font-weight: 600; display: inline-block; min-width: 92px; margin-right: 6px; }
     .court-card .cd-pending { color: #8b949e; font-style: italic; }
     .court-card .cd-note { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #30363d; color: #6e7681; font-size: 10px; font-style: italic; }
+    .court-card .cd-hearings-lbl { margin-top: 6px; }
+    .court-card .cd-hearing { padding: 2px 0 2px 96px; font-size: 11px; color: #a0b0c8; }
 
 #ad-panel { max-width: 1600px; margin: 12px auto 20px; padding: 0 12px; }
 #ad-panel .ad-box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; text-align: center; font-size: 12px; color: #8b949e; }
@@ -483,7 +485,59 @@ var COURT_LABELS = {
     'BF':'Bond Forfeited','BE':'Bond Executed','EX':'Expunged','S':'Sentenced'
   };
   function dispLabel(d){ if(!d) return ''; if (DISP_LABELS[d]) return DISP_LABELS[d]; return d; }
-  window.__ccToggle = function(id){ var d=document.getElementById(id); if(d) d.style.display = d.style.display==='block' ? 'none' : 'block'; };
+  window.__ccDetailsLoaded = false; window.__ccDetailsData = null;
+window.__ccLoadDetails = function() {
+  if (window.__ccDetailsLoaded) return Promise.resolve(window.__ccDetailsData);
+  return fetch("court_details.json?v=" + Date.now()).then(function(r){return r.json();}).then(function(d){
+    window.__ccDetailsData = d; window.__ccDetailsLoaded = true;
+    document.querySelectorAll(".cd-more").forEach(function(el){
+      var caseNum = el.getAttribute("data-case");
+      if (caseNum && d[caseNum]) el.innerHTML = window.__ccRenderMore(d[caseNum]);
+      else el.innerHTML = "<div class=\"cd-note\">No OCIS detail data for this case yet.</div>";
+    });
+    return d;
+  }).catch(function(e){
+    document.querySelectorAll(".cd-more").forEach(function(el){ el.innerHTML = "<div class=\"cd-note\">Failed to load OCIS details.</div>"; });
+  });
+};
+window.__ccRenderMore = function(m){
+  if (!m) return "";
+  var esc = function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});};
+  var h = "";
+  if (m.amendCharge && m.amendCharge.desc && m.origCharge && m.origCharge.desc !== m.amendCharge.desc) {
+    h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Original</span>" + esc(m.origCharge.desc) + " (§ " + esc(m.origCharge.code) + ")</div>";
+    h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Amended to</span>" + esc(m.amendCharge.desc) + " (§ " + esc(m.amendCharge.code) + ")</div>";
+  }
+  if (m.arrest) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Arrested</span>" + esc(m.arrest) + "</div>";
+  if (m.filed) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Filed</span>" + esc(m.filed) + "</div>";
+  if (m.origCharge && m.origCharge.cls) { var tp = m.origCharge.type === "F" ? "Felony" : m.origCharge.type === "M" ? "Misdemeanor" : m.origCharge.type === "I" ? "Infraction" : ""; h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Class</span>Cl " + esc(m.origCharge.cls) + (tp ? " " + tp : "") + "</div>"; }
+  if (m.def) {
+    var demo = []; if (m.def.race) demo.push(m.def.race); if (m.def.sex) demo.push(m.def.sex);
+    if (demo.length) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Demographics</span>" + esc(demo.join(" · ")) + "</div>";
+    if (m.def.dob) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">DOB (m/d)</span>" + esc(m.def.dob) + "</div>";
+    var loc = [m.def.city, m.def.state, m.def.zip].filter(function(x){return x;}).join(" ");
+    if (loc) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">City</span>" + esc(loc) + "</div>";
+  }
+  if (m.atty) {
+    h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Attorney</span>" + esc(m.atty.name || "—") + (m.atty.addr ? " (" + esc(m.atty.addr) + ")" : "") + "</div>";
+    if (m.atty.phone) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Atty Phone</span>" + esc(m.atty.phone) + "</div>";
+  } else { h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Attorney</span><span class=\"cd-pending\">Pro se (none of record)</span></div>"; }
+  if (m.sent) { var s=[]; if(m.sent.m) s.push(m.sent.m+"mo"); if(m.sent.d) s.push(m.sent.d+"d"); if(m.sent.h) s.push(m.sent.h+"h"); h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Jail</span>" + (s.length ? esc(s.join(" ")) : "<span class=\"cd-pending\">None</span>") + "</div>"; }
+  if (m.susp) { var s=[]; if(m.susp.m) s.push(m.susp.m+"mo"); if(m.susp.d) s.push(m.susp.d+"d"); if(m.susp.h) s.push(m.susp.h+"h"); if(s.length) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Suspended</span>" + esc(s.join(" ")) + "</div>"; }
+  if (m.prob) { var p=[]; if(m.prob.y) p.push(m.prob.y+"yr"); if(m.prob.m) p.push(m.prob.m+"mo"); if(m.prob.d) p.push(m.prob.d+"d"); if(p.length) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Probation</span>" + esc(p.join(" ")) + "</div>"; }
+  if (m.fine || m.costs) { var parts=[]; if(m.fine) parts.push("Fine $"+m.fine); if(m.costs) parts.push("Costs $"+m.costs); if(m.paid) parts.push("(Paid)"); h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Financial</span>" + esc(parts.join(" · ")) + "</div>"; }
+  if (m.hearings && m.hearings.length) {
+    var hres = {"F":"Final","W":"Waived","T":"Continued","C":"Continued","A":"Amended","B":"Bond","H":"Held","P":"Plea","D":"Dismissed","G":"Guilty","N":"Not Guilty"};
+    var pres = {"TA":"Guilty (Alford)","G":"Guilty","GA":"Guilty (Alford)","NG":"Not Guilty","NP":"Nolle Prosequi"};
+    h += "<div class=\"cd-row cd-hearings-lbl\"><span class=\"cd-lbl\">Hearings</span></div>";
+    m.hearings.forEach(function(hh){
+      var txt = hh.date || ""; if (hh.time) txt += " " + hh.time.substring(0,5); if (hh.room) txt += " · Rm " + hh.room; if (hh.result) txt += " · " + (hres[hh.result] || hh.result); if (hh.plea) txt += " · Plea: " + (pres[hh.plea] || hh.plea);
+      h += "<div class=\"cd-hearing\">" + esc(txt) + "</div>";
+    });
+  }
+  return h;
+};
+window.__ccToggle = function(id){ var d=document.getElementById(id); if(!d) return; d.style.display = d.style.display==='block' ? 'none' : 'block'; if (d.style.display==='block') window.__ccLoadDetails(); };
   function render() {
   var r = filtered[currentIdx];
   var mugWrap = document.getElementById('mugshot-wrap');
@@ -573,7 +627,7 @@ var COURT_LABELS = {
     crHTML += '<div class="cd-row"><span class="cd-lbl">Sentence</span>' + (_sn ? esc(_sn) : (_dd ? '<span class="cd-pending">None</span>' : '<span class="cd-pending">Pending</span>')) + '</div>';
     if (ci.defendantDOB) crHTML += '<div class="cd-row"><span class="cd-lbl">DOB</span>' + esc(ci.defendantDOB) + '</div>';
     if (ci.defendantName) crHTML += '<div class="cd-row"><span class="cd-lbl">Defendant</span>' + esc(ci.defendantName) + '</div>';
-    crHTML += '<div class="cd-note">Attorney, judge, and hearing history not yet in this dataset.</div>';
+    crHTML += '<div class="cd-more" data-case="' + esc(ci.formattedCaseNum) + '"><span class="cd-pending">Loading additional details…</span></div>';
     crHTML += '</div>';
     crHTML += '</div>';
   });
