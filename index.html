@@ -54,9 +54,14 @@ a:hover { text-decoration: underline; }
 .src-rrj { background: #1f3a5f; color: #79c0ff; }
 .src-henrico { background: #2d1f3d; color: #d2a8ff; }
 .src-richmond { background: #1f3d2a; color: #56d364; }
-.src-pamunkey { background: #3d2a1f; color: #fd7e14; }
 .src-peninsula { background: #3d2f1f; color: #f9b369; }
 .src-arlington { background: #1f3d3a; color: #4ecdc4; }
+/* Recent-mug card source stripe — same hues as badge colors, keep card bg unchanged */
+#landing .recent-card.src-rrj { border-top: 3px solid #79c0ff; }
+#landing .recent-card.src-henrico { border-top: 3px solid #d2a8ff; }
+#landing .recent-card.src-richmond { border-top: 3px solid #56d364; }
+#landing .recent-card.src-peninsula { border-top: 3px solid #f9b369; }
+#landing .recent-card.src-arlington { border-top: 3px solid #4ecdc4; }
 
 #landing { display: none; padding: 20px 16px; max-width: 1400px; margin: 0 auto; }
 #landing.active { display: block; }
@@ -116,15 +121,6 @@ a:hover { text-decoration: underline; }
 .court-card .court-name { font-weight: 600; color: #f0f6fc; margin-bottom: 2px; }
 .court-card .court-date { color: #8b949e; }
 .court-card .charge-refs { color: #58a6ff; font-size: 10px; margin-top: 2px; }
-    .court-card { cursor: pointer; transition: background 0.12s; }
-    .court-card:hover { background: #131a24; }
-    .court-card .court-detail { margin-top: 6px; padding-top: 6px; border-top: 1px solid #30363d; font-size: 10.5px; color: #c9d1d9; line-height: 1.45; }
-    .court-card .cd-row { padding: 1px 0; }
-    .court-card .cd-lbl { color: #8b949e; font-weight: 600; display: inline-block; min-width: 92px; margin-right: 6px; }
-    .court-card .cd-pending { color: #8b949e; font-style: italic; }
-    .court-card .cd-note { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #30363d; color: #6e7681; font-size: 10px; font-style: italic; }
-    .court-card .cd-hearings-lbl { margin-top: 6px; }
-    .court-card .cd-hearing { padding: 2px 0 2px 96px; font-size: 11px; color: #a0b0c8; }
 
 #ad-panel { max-width: 1600px; margin: 12px auto 20px; padding: 0 12px; }
 #ad-panel .ad-box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; text-align: center; font-size: 12px; color: #8b949e; }
@@ -175,7 +171,7 @@ a:hover { text-decoration: underline; }
 <div id="disclaimer">Public records. An arrest is not a conviction. All individuals are presumed innocent.</div>
 
 <div id="filter-bar">
-  <div class="filter-group"><label>Source</label><select id="f-source"><option value="">All sources</option><option value="RRJ">Riverside Regional Jail</option><option value="Henrico">Henrico County</option><option value="Richmond">Richmond City</option><option value="Pamunkey">Pamunkey Regional</option><option value="Peninsula">Peninsula Regional</option><option value="Arlington">Arlington County</option></select></div>
+  <div class="filter-group"><label>Source</label><select id="f-source"><option value="">All sources</option><option value="RRJ">Riverside Regional Jail</option><option value="Henrico">Henrico County</option><option value="Richmond">Richmond City</option><option value="Peninsula">Peninsula Regional</option><option value="Arlington">Arlington County</option></select></div>
   <div class="filter-group"><label>Custody</label><select id="f-custody"><option value="">All</option><option value="held">In custody</option><option value="released">Released</option></select></div>
   <div class="filter-group"><label>Sex</label><select id="f-sex"><option value="">All</option></select></div>
   <div class="filter-group"><label>Race</label><select id="f-race"><option value="">All</option></select></div>
@@ -213,20 +209,19 @@ a:hover { text-decoration: underline; }
   <div class="ad-box">Attorney? List your firm here. <a href="mailto:van@vanhardenbergh.com">Contact</a></div>
 </div>
 
-<div id="loading"><div><span class="spinner"></span>Loading <span id="loaded-count">0</span> / 6 sources...</div><div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div></div>
+<div id="loading"><div><span class="spinner"></span>Loading <span id="loaded-count">0</span> / 5 sources...</div><div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div></div>
 
 <script>
 var RECORDS = [];
 var mugshotURLs = {};
 var filtered = [];
 var currentIdx = 0;
-var sourcesLoaded = { rrj: false, henrico: false, richmond: false, pamunkey: false, peninsula: false, arlington: false };
-var SOURCE_KEYS = ['rrj', 'henrico', 'richmond', 'pamunkey', 'peninsula', 'arlington'];
+var sourcesLoaded = { rrj: false, henrico: false, richmond: false, peninsula: false, arlington: false };
+var SOURCE_KEYS = ['rrj', 'henrico', 'richmond', 'peninsula', 'arlington'];
 var SOURCE_URLS = {
   rrj: 'https://freecitizenreport.github.io/rrj-viewer/data.json',
   henrico: 'https://freecitizenreport.github.io/henrico-viewer/data.json',
   richmond: 'https://freecitizenreport.github.io/richmond-viewer/data.json',
-  pamunkey: 'https://freecitizenreport.github.io/pamunkey-viewer/data.json',
   peninsula: 'https://freecitizenreport.github.io/peninsula-viewer/data.json',
   arlington: 'https://freecitizenreport.github.io/arlington-viewer/data.json'
 };
@@ -234,18 +229,34 @@ var SOURCE_LABELS = {
   RRJ: 'Riverside Regional Jail',
   Henrico: 'Henrico County',
   Richmond: 'Richmond City',
-  Pamunkey: 'Pamunkey Regional',
   Peninsula: 'Peninsula Regional',
   Arlington: 'Arlington County'
 };
 var SOURCE_CLASSES = {
   RRJ: 'src-rrj', Henrico: 'src-henrico', Richmond: 'src-richmond',
-  Pamunkey: 'src-pamunkey', Peninsula: 'src-peninsula', Arlington: 'src-arlington'
+  Peninsula: 'src-peninsula', Arlington: 'src-arlington'
 };
 
 function esc(s) { if (s === null || s === undefined) return ''; return String(s).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
-function parseDate(d) { if (!d) return 0; var m = String(d).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if (!m) return 0; var y = parseInt(m[3], 10); if (y < 100) y += 2000; return new Date(y, parseInt(m[1], 10) - 1, parseInt(m[2], 10)).getTime(); }
+function parseDate(d) {
+  if (!d) return 0;
+  var s = String(d);
+  var m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (!m) return 0;
+  var y = parseInt(m[3], 10); if (y < 100) y += 2000;
+  var mo = parseInt(m[1], 10) - 1, dy = parseInt(m[2], 10);
+  // Optional time-of-day suffix: "HH:MM[:SS] AM|PM" or "HH:MM[:SS]"
+  var t = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/);
+  var hh = 0, mi = 0, ss = 0;
+  if (t) {
+    hh = parseInt(t[1], 10); mi = parseInt(t[2], 10); ss = t[3] ? parseInt(t[3], 10) : 0;
+    var ap = t[4] ? t[4].toUpperCase() : '';
+    if (ap === 'PM' && hh < 12) hh += 12;
+    else if (ap === 'AM' && hh === 12) hh = 0;
+  }
+  return new Date(y, mo, dy, hh, mi, ss).getTime();
+}
 function fmtDate(d) { if (!d) return ''; var m = String(d).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if (!m) return String(d).slice(0, 10); var y = parseInt(m[3], 10); if (y < 100) y += 2000; var mo = String(parseInt(m[1], 10)).padStart(2, '0'); var dy = String(parseInt(m[2], 10)).padStart(2, '0'); return mo + '/' + dy + '/' + y; }
 
 function normalizeSimple(arr, src) {
@@ -275,7 +286,6 @@ function normalizeSimple(arr, src) {
       courtHistory: r.courtHistory || [],
       county: r.county || r.address || '',
       source: src,
-      firstSeenAt: r.firstSeenAt || '',
       _raw: r
     };
   });
@@ -292,12 +302,12 @@ function normalizeHenrico(arr) {
       name = last + ', ' + parts.join(' ');
     }
     return {
-      id: r.id || r.bookingNum || r.inmateId || '',
+      id: r.id || r.bookingNum || '',
       name: name,
       dob: r.dob || '',
       sex: r.sex || '',
       race: r.race || '',
-      bookDate: fmtDate(r.bookDate || r.commitmentDate || r.bookingDate || ''),
+      bookDate: fmtDate(r.bookDate || r.commitmentDate || ''),
       releaseDate: fmtDate(r.releaseDate || ''),
       charges: (r.charges || []).map(function(c) { return typeof c === 'string' ? { description: c } : c; }),
       bonds: r.bonds || [],
@@ -306,19 +316,17 @@ function normalizeHenrico(arr) {
       courtHistory: r.courtHistory || [],
       county: r.county || 'Henrico County',
       source: 'Henrico',
-      firstSeenAt: r.firstSeenAt || '',
       _raw: r
     };
   });
 }
 function normalizeRichmond(arr) { return normalizeSimple(arr, 'Richmond'); }
-function normalizePamunkey(arr) { return normalizeSimple(arr, 'Pamunkey'); }
 function normalizePeninsula(arr) { return normalizeSimple(arr, 'Peninsula'); }
 function normalizeArlington(arr) { return normalizeSimple(arr, 'Arlington'); }
 
 var NORMALIZERS = {
   rrj: normalizeRRJ, henrico: normalizeHenrico, richmond: normalizeRichmond,
-  pamunkey: normalizePamunkey, peninsula: normalizePeninsula, arlington: normalizeArlington
+  peninsula: normalizePeninsula, arlington: normalizeArlington
 };
 
 function progress() {
@@ -332,30 +340,20 @@ function progress() {
 }
 
 function finalizeLoad() {
-  // Sort rule (canonical — see SORT_RULE.md, confirmed by Van 2026-04-18):
-    //   Rule 1: Records without a mugshot are EXCLUDED from the feed entirely.
-    //           (Filter, not sort — they do not rank last, they are not shown.)
-    //   Rule 2: Custody status is IRRELEVANT to ordering. Released and in-custody intermix.
-    //   Rule 3: Primary key is retrievedAt DESC, where
-    //             retrievedAt = min(firstSeenAt, bookDate + 24h).
-    //           The 24h clamp protects against new-source onboarding, which otherwise
-    //           stamps firstSeenAt = now on stale bookings and pushes them to the top.
-    //   Rule 4: Tiebreakers (rare): bookDate DESC, then name A-Z for stability.
-    RECORDS = RECORDS.filter(function(r) { return r.mugshot; });
-    RECORDS.sort(function(a, b) {
-      var fa = a.firstSeenAt ? Date.parse(a.firstSeenAt) : NaN;
-      var fb = b.firstSeenAt ? Date.parse(b.firstSeenAt) : NaN;
-      var ba = parseDate(a.bookDate), bb = parseDate(b.bookDate);
-      var capA = isNaN(ba) ? Infinity : ba + 86400000;
-      var capB = isNaN(bb) ? Infinity : bb + 86400000;
-      var ra = isNaN(fa) ? (isNaN(ba) ? 0 : ba) : Math.min(fa, capA);
-      var rb = isNaN(fb) ? (isNaN(bb) ? 0 : bb) : Math.min(fb, capB);
-      if (ra !== rb) return rb - ra;
-      var bd = (isNaN(bb) ? 0 : bb) - (isNaN(ba) ? 0 : ba);
-      if (bd) return bd;
-      var an = (a.name || "").toUpperCase(), bn = (b.name || "").toUpperCase();
-      return an < bn ? -1 : an > bn ? 1 : 0;
-    });
+  // Sort: in-custody first, with-mugshot first, newest mugshotDate||bookDate,
+  // with numeric ID as a within-day tiebreaker (higher ID = later booking).
+  RECORDS.sort(function(a, b) {
+    var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
+    if (ar !== br) return ar - br;
+    var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
+    if (am !== bm) return am - bm;
+    var ad = parseDate(a.mugshotDate) || parseDate(a.bookDate);
+    var bd = parseDate(b.mugshotDate) || parseDate(b.bookDate);
+    if (ad !== bd) return bd - ad;
+    var ai = parseInt(String(a.id || '').replace(/\D/g, ''), 10) || 0;
+    var bi = parseInt(String(b.id || '').replace(/\D/g, ''), 10) || 0;
+    return bi - ai;
+  });
   document.getElementById('loading').classList.add('done');
   buildFilters();
   applyFilters();
@@ -459,86 +457,7 @@ function updateCounter() {
   document.getElementById('next-btn').disabled = currentIdx >= filtered.length - 1;
 }
 
-var COURT_LABELS = {
-    '020G':'Chesterfield GDC','020C':'Chesterfield Circuit','020J':'Chesterfield JDR',
-    '036G':'Goochland GDC','036C':'Goochland Circuit',
-    '041G':'Hanover GDC','041C':'Hanover Circuit','041J':'Hanover JDR',
-    '064G':'New Kent GDC','064C':'New Kent Circuit',
-    '073G':'Powhatan GDC','073C':'Powhatan Circuit',
-    '087G':'Henrico GDC','087C':'Henrico Circuit','087J':'Henrico JDR',
-    '095G':'Spotsylvania GDC','099G':'Stafford GDC',
-    '760G':'Richmond City GDC','760C':'Richmond City Circuit','760J':'Richmond City JDR',
-    '790G':'Staunton GDC','810G':'Virginia Beach GDC','540G':'Norfolk GDC'
-  };
-  function courtLabel(code){ if(!code) return ''; return COURT_LABELS[code] || code; }
-  function courtLevelLabel(lv){ if(!lv) return ''; if(lv==='G') return 'General District Court'; if(lv==='C') return 'Circuit Court'; if(lv==='J') return 'Juvenile & Domestic Relations'; return lv; }
-  var DISP_LABELS = {
-    'G':'Guilty','GA':'Guilty (Alford)','GJ':'Guilty (Jury)','GR':'Guilty in Absentia',
-    'N':'Not Guilty','NG':'Not Guilty',
-    'D':'Dismissed','DWP':'Dismissed With Prejudice','DNP':'Dismissed Without Prejudice',
-    'NP':'Nolle Prosequi','R':'Nolle Prosequi',
-    'REV':'Reversed','REM':'Remanded','RES':'Restored','REF':'Referred',
-    'CM':'Committed','CL':'Closed','CT':'Continued',
-    'A':'Amended','AW':'Amended & Withdrawn',
-    'PP':'Prepaid','FF':'Fine Forfeited','FW':'Fine Waived',
-    'TR':'Transferred','W':'Withdrawn','X':'Disposed/Other',
-    'BF':'Bond Forfeited','BE':'Bond Executed','EX':'Expunged','S':'Sentenced'
-  };
-  function dispLabel(d){ if(!d) return ''; if (DISP_LABELS[d]) return DISP_LABELS[d]; return d; }
-  window.__ccDetailsLoaded = false; window.__ccDetailsData = null;
-window.__ccLoadDetails = function() {
-  if (window.__ccDetailsLoaded) return Promise.resolve(window.__ccDetailsData);
-  return fetch("court_details.json?v=" + Date.now()).then(function(r){return r.json();}).then(function(d){
-    window.__ccDetailsData = d; window.__ccDetailsLoaded = true;
-    document.querySelectorAll(".cd-more").forEach(function(el){
-      var caseNum = el.getAttribute("data-case");
-      if (caseNum && d[caseNum]) el.innerHTML = window.__ccRenderMore(d[caseNum]);
-      else el.innerHTML = "<div class=\"cd-note\">No OCIS detail data for this case yet.</div>";
-    });
-    return d;
-  }).catch(function(e){
-    document.querySelectorAll(".cd-more").forEach(function(el){ el.innerHTML = "<div class=\"cd-note\">Failed to load OCIS details.</div>"; });
-  });
-};
-window.__ccRenderMore = function(m){
-  if (!m) return "";
-  var esc = function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});};
-  var h = "";
-  if (m.amendCharge && m.amendCharge.desc && m.origCharge && m.origCharge.desc !== m.amendCharge.desc) {
-    h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Original</span>" + esc(m.origCharge.desc) + " (§ " + esc(m.origCharge.code) + ")</div>";
-    h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Amended to</span>" + esc(m.amendCharge.desc) + " (§ " + esc(m.amendCharge.code) + ")</div>";
-  }
-  if (m.arrest) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Arrested</span>" + esc(m.arrest) + "</div>";
-  if (m.filed) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Filed</span>" + esc(m.filed) + "</div>";
-  if (m.origCharge && m.origCharge.cls) { var tp = m.origCharge.type === "F" ? "Felony" : m.origCharge.type === "M" ? "Misdemeanor" : m.origCharge.type === "I" ? "Infraction" : ""; h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Class</span>Cl " + esc(m.origCharge.cls) + (tp ? " " + tp : "") + "</div>"; }
-  if (m.def) {
-    var demo = []; if (m.def.race) demo.push(m.def.race); if (m.def.sex) demo.push(m.def.sex);
-    if (demo.length) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Demographics</span>" + esc(demo.join(" · ")) + "</div>";
-    if (m.def.dob) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">DOB (m/d)</span>" + esc(m.def.dob) + "</div>";
-    var loc = [m.def.city, m.def.state, m.def.zip].filter(function(x){return x;}).join(" ");
-    if (loc) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">City</span>" + esc(loc) + "</div>";
-  }
-  if (m.atty) {
-    h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Attorney</span>" + esc(m.atty.name || "—") + (m.atty.addr ? " (" + esc(m.atty.addr) + ")" : "") + "</div>";
-    if (m.atty.phone) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Atty Phone</span>" + esc(m.atty.phone) + "</div>";
-  } else { h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Attorney</span><span class=\"cd-pending\">Pro se (none of record)</span></div>"; }
-  if (m.sent) { var s=[]; if(m.sent.m) s.push(m.sent.m+"mo"); if(m.sent.d) s.push(m.sent.d+"d"); if(m.sent.h) s.push(m.sent.h+"h"); h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Jail</span>" + (s.length ? esc(s.join(" ")) : "<span class=\"cd-pending\">None</span>") + "</div>"; }
-  if (m.susp) { var s=[]; if(m.susp.m) s.push(m.susp.m+"mo"); if(m.susp.d) s.push(m.susp.d+"d"); if(m.susp.h) s.push(m.susp.h+"h"); if(s.length) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Suspended</span>" + esc(s.join(" ")) + "</div>"; }
-  if (m.prob) { var p=[]; if(m.prob.y) p.push(m.prob.y+"yr"); if(m.prob.m) p.push(m.prob.m+"mo"); if(m.prob.d) p.push(m.prob.d+"d"); if(p.length) h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Probation</span>" + esc(p.join(" ")) + "</div>"; }
-  if (m.fine || m.costs) { var parts=[]; if(m.fine) parts.push("Fine $"+m.fine); if(m.costs) parts.push("Costs $"+m.costs); if(m.paid) parts.push("(Paid)"); h += "<div class=\"cd-row\"><span class=\"cd-lbl\">Financial</span>" + esc(parts.join(" · ")) + "</div>"; }
-  if (m.hearings && m.hearings.length) {
-    var hres = {"F":"Final","W":"Waived","T":"Continued","C":"Continued","A":"Amended","B":"Bond","H":"Held","P":"Plea","D":"Dismissed","G":"Guilty","N":"Not Guilty"};
-    var pres = {"TA":"Guilty (Alford)","G":"Guilty","GA":"Guilty (Alford)","NG":"Not Guilty","NP":"Nolle Prosequi"};
-    h += "<div class=\"cd-row cd-hearings-lbl\"><span class=\"cd-lbl\">Hearings</span></div>";
-    m.hearings.forEach(function(hh){
-      var txt = hh.date || ""; if (hh.time) txt += " " + hh.time.substring(0,5); if (hh.room) txt += " · Rm " + hh.room; if (hh.result) txt += " · " + (hres[hh.result] || hh.result); if (hh.plea) txt += " · Plea: " + (pres[hh.plea] || hh.plea);
-      h += "<div class=\"cd-hearing\">" + esc(txt) + "</div>";
-    });
-  }
-  return h;
-};
-window.__ccToggle = function(id){ var d=document.getElementById(id); if(!d) return; d.style.display = d.style.display==='block' ? 'none' : 'block'; if (d.style.display==='block') window.__ccLoadDetails(); };
-  function render() {
+function render() {
   var r = filtered[currentIdx];
   var mugWrap = document.getElementById('mugshot-wrap');
   if (r && r.mugshot) {
@@ -596,39 +515,11 @@ window.__ccToggle = function(id){ var d=document.getElementById(id); if(!d) retu
 
   var crHTML = '';
   if (!r.courtHistory || !r.courtHistory.length) crHTML = '<div style="color:#8b949e;padding:10px;font-size:11px;">No court history</div>';
-  (r.courtHistory || []).forEach(function(ci, ciIdx) {
-    var _cd = (ci.chargeDesc || '');
-    var _cc = (ci.court || '');
-    var _cl = courtLabel(_cc);
-    var _od = ci.offenseDate || ci.courtDate || '';
-    var _dd = dispLabel(ci.dispositionDesc || '');
-    var _cs = ci.codeSection || '';
-    var _cn = ci.formattedCaseNum || ci.caseTrackingID || '';
-    var _sn = ci.sentence || '';
-    var _lv = courtLevelLabel(ci.courtLevel || (_cc ? _cc.slice(-1) : ''));
-    var _did = 'cdet_' + (r.id || 'x') + '_' + ciIdx;
-    crHTML += '<div class="court-card" onclick="__ccToggle(\''+_did+'\')">';
-    crHTML += '<div class="court-name">' + esc(_cd || _cl || _cc || 'Case') + '</div>';
-    var _meta = [];
-    if (_od) _meta.push(esc(_od));
-    if (_cl) _meta.push(esc(_cl));
-    if (_cs) _meta.push('\u00A7 ' + esc(_cs));
-    if (_meta.length) crHTML += '<div class="court-date">' + _meta.join(' &middot; ') + '</div>';
-    if (_dd) crHTML += '<div class="charge-refs">' + esc(_dd) + '</div>';
-    crHTML += '<div id="'+_did+'" class="court-detail" style="display:none">';
-    if (_cn) crHTML += '<div class="cd-row"><span class="cd-lbl">Case #</span>' + esc(_cn) + '</div>';
-    if (_cl || _cc) crHTML += '<div class="cd-row"><span class="cd-lbl">Court</span>' + esc(_cl || _cc) + (_cl && _cc ? ' (' + esc(_cc) + ')' : '') + '</div>';
-    if (_lv) crHTML += '<div class="cd-row"><span class="cd-lbl">Court Level</span>' + esc(_lv) + '</div>';
-    if (_cs) crHTML += '<div class="cd-row"><span class="cd-lbl">Va. Code</span>' + esc(_cs) + '</div>';
-    if (_od) crHTML += '<div class="cd-row"><span class="cd-lbl">Offense Date</span>' + esc(_od) + '</div>';
-    if (_cd) crHTML += '<div class="cd-row"><span class="cd-lbl">Charge</span>' + esc(_cd) + '</div>';
-    crHTML += '<div class="cd-row"><span class="cd-lbl">Disposition</span>' + (_dd ? esc(_dd) : '<span class="cd-pending">Pending</span>') + '</div>';
-    crHTML += '<div class="cd-row"><span class="cd-lbl">Disposed</span>' + (ci.dispositionDate ? esc(ci.dispositionDate) : '<span class="cd-pending">—</span>') + '</div>';
-    crHTML += '<div class="cd-row"><span class="cd-lbl">Sentence</span>' + (_sn ? esc(_sn) : (_dd ? '<span class="cd-pending">None</span>' : '<span class="cd-pending">Pending</span>')) + '</div>';
-    if (ci.defendantDOB) crHTML += '<div class="cd-row"><span class="cd-lbl">DOB</span>' + esc(ci.defendantDOB) + '</div>';
-    if (ci.defendantName) crHTML += '<div class="cd-row"><span class="cd-lbl">Defendant</span>' + esc(ci.defendantName) + '</div>';
-    crHTML += '<div class="cd-more" data-case="' + esc(ci.formattedCaseNum) + '"><span class="cd-pending">Loading additional details…</span></div>';
-    crHTML += '</div>';
+  (r.courtHistory || []).forEach(function(ci) {
+    crHTML += '<div class="court-card">';
+    crHTML += '<div class="court-name">' + esc(ci.court || '') + '</div>';
+    if (ci.courtDate) crHTML += '<div class="court-date">' + esc(ci.courtDate) + '</div>';
+    if (ci.chargeRefs) crHTML += '<div class="charge-refs">Charges: ' + esc(ci.chargeRefs) + '</div>';
     crHTML += '</div>';
   });
   document.getElementById('court-history-list').innerHTML = crHTML;
@@ -643,7 +534,7 @@ function renderLanding() {
     var label = k.charAt(0).toUpperCase() + k.slice(1);
     bySource[k] = { total: 0, held: 0, label: label };
   });
-  var inv = { RRJ: 'rrj', Henrico: 'henrico', Richmond: 'richmond', Pamunkey: 'pamunkey', Peninsula: 'peninsula', Arlington: 'arlington' };
+  var inv = { RRJ: 'rrj', Henrico: 'henrico', Richmond: 'richmond', Peninsula: 'peninsula', Arlington: 'arlington' };
   RECORDS.forEach(function(r) {
     var k = inv[r.source]; if (!k) return;
     bySource[k].total++;
@@ -663,12 +554,12 @@ function renderLanding() {
   document.getElementById('source-count').textContent = SOURCE_KEYS.filter(function(k) { return bySource[k].total > 0; }).length;
 
   // Recent mugs — top 24 by parseDate(bookDate) with mugshot
-  var withMug = RECORDS.filter(function(r) { return r.mugshot; }).slice(0, 100);
+  var withMug = RECORDS.filter(function(r) { return r.mugshot && !r.releaseDate; }).slice(0, 100);
   var rmHTML = '';
   withMug.forEach(function(r) {
     var gi = RECORDS.indexOf(r);
     var url = mugshotURLs[gi] || r.mugshot;
-    rmHTML += '<div class="recent-card" data-id="' + esc(r.id) + '">';
+    rmHTML += '<div class="recent-card ' + (SOURCE_CLASSES[r.source] || '') + '" data-id="' + esc(r.id) + '">';
     rmHTML += '<div class="mug">' + (r.mugshot ? '<img src="' + esc(url) + '" alt="" />' : '<div class="nomug">No mugshot</div>') + '</div>';
     rmHTML += '<div class="rc-meta">';
     rmHTML += '<div class="rc-name">' + esc(r.name) + '</div>';
@@ -797,82 +688,5 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('#search-wrap')) document.getElementById('search-results').style.display = 'none';
 });
 </script>
-<!-- LAST_SEEN_ENHANCEMENT_V2_START -->
-<style>.source-card .last-seen{display:block;margin-top:6px;font-size:0.75em;opacity:0.75;color:#ccc;}.source-card .last-seen .ls-strong{color:#fff;font-weight:600;opacity:0.9;}</style>
-<script>
-(function(){
-  var SOURCE_FOR_HEADING = {
-    "Riverside Regional Jail": "RRJ",
-    "Henrico County": "Henrico",
-    "Richmond City": "Richmond",
-    "Pamunkey Regional": "Pamunkey",
-    "Peninsula Regional": "Peninsula",
-    "Arlington County": "Arlington"
-  };
-  function relTime(iso){
-    if(!iso) return "";
-    var t = new Date(iso).getTime();
-    if(!t) return "";
-    var diff = Date.now() - t;
-    if(diff < 0) return "just now";
-    var m = Math.floor(diff/60000);
-    if(m < 1) return "just now";
-    if(m < 60) return m + "m ago";
-    var hh = Math.floor(m/60);
-    if(hh < 24) return hh + "h ago";
-    return Math.floor(hh/24) + "d ago";
-  }
-  function stamp(){
-    if(typeof RECORDS === "undefined" || !RECORDS || !RECORDS.length) return false;
-    var cards = document.querySelectorAll(".source-card");
-    if(!cards.length) return false;
-    var maxBySource = {};
-    for(var i=0;i<RECORDS.length;i++){
-      var r = RECORDS[i]; var s = r.source; var fs = r.firstSeenAt;
-      if(!s||!fs) continue;
-      if(!maxBySource[s] || fs > maxBySource[s]) maxBySource[s] = fs;
-    }
-    var stamped = 0;
-    cards.forEach(function(card){
-      var hdr = card.querySelector("h1,h2,h3,h4,span");
-      if(!hdr) return;
-      var heading = hdr.textContent.trim();
-      var source = SOURCE_FOR_HEADING[heading];
-      if(!source) return;
-      var maxFs = maxBySource[source];
-      if(!maxFs) return;
-      var existing = card.querySelector(".last-seen");
-      var newText = "Latest new booking: " + relTime(maxFs);
-      if(existing && existing.textContent === newText){ stamped++; return; }
-      if(existing) existing.remove();
-      var div = document.createElement("div");
-      div.className = "last-seen";
-      div.innerHTML = "Latest new booking: <span class=\"ls-strong\">" + relTime(maxFs) + "</span>";
-      card.appendChild(div);
-      stamped++;
-    });
-    return stamped > 0;
-  }
-  // Aggressive retry: every 500ms for 60s
-  var attempts = 0;
-  var iv = setInterval(function(){
-    attempts++;
-    stamp();
-    if(attempts > 120) clearInterval(iv);
-  }, 500);
-  // Also run once immediately
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", function(){ stamp(); });
-  } else { stamp(); }
-  // MutationObserver: re-stamp on any DOM change under body
-  try {
-    var mo = new MutationObserver(function(){ stamp(); });
-    mo.observe(document.body, { childList: true, subtree: true });
-    // Disconnect after 60s to avoid perma-polling
-    setTimeout(function(){ mo.disconnect(); }, 60000);
-  } catch(e) {}
-})();
-</script>
-<!-- LAST_SEEN_ENHANCEMENT_V2_END -->
 </body>
 </html>
