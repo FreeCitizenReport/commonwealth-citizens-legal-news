@@ -283,6 +283,7 @@ function normalizeSimple(arr, src) {
       bonds: r.bonds || [],
       mugshot: r.mugshot || '',
       mugshotDate: r.mugshotDate || '',
+      firstSeenAt: r.firstSeenAt || '',
       courtHistory: r.courtHistory || [],
       county: r.county || r.address || '',
       source: src,
@@ -317,6 +318,7 @@ function normalizeHenrico(arr) {
       bonds: r.bonds || [],
       mugshot: r.mugshot || '',
       mugshotDate: r.mugshotDate || '',
+      firstSeenAt: r.firstSeenAt || '',
       courtHistory: r.courtHistory || [],
       county: r.county || 'Henrico County',
       source: 'Henrico',
@@ -345,7 +347,12 @@ function progress() {
 
 function finalizeLoad() {
   // Sort: in-custody first, with-mugshot first, newest mugshotDate||bookDate,
-  // with numeric ID as a within-day tiebreaker (higher ID = later booking).
+  // with firstSeenAt desc as a cross-jail-comparable tiebreaker. Previously
+  // used `parseInt(id)` desc, but IDs aren't commensurable across jails —
+  // RRJ's 7-digit IDs (2603641) always beat Henrico's 6-digit (511275) and
+  // Richmond's 5-digit (185308) on same-date ties, so landing-page views
+  // were 100% RRJ. firstSeenAt is an ISO timestamp stamped when our scraper
+  // first saw the record — genuinely comparable across sources.
   RECORDS.sort(function(a, b) {
     var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
     if (ar !== br) return ar - br;
@@ -354,6 +361,12 @@ function finalizeLoad() {
     var ad = parseDate(a.mugshotDate) || parseDate(a.bookDate);
     var bd = parseDate(b.mugshotDate) || parseDate(b.bookDate);
     if (ad !== bd) return bd - ad;
+    // Cross-jail tiebreaker: most-recently-seen record wins. String compare
+    // on ISO 8601 is equivalent to chronological compare.
+    var afs = a.firstSeenAt || '';
+    var bfs = b.firstSeenAt || '';
+    if (afs !== bfs) return bfs.localeCompare(afs);
+    // Last resort: numeric ID desc (within-jail only meaningful).
     var ai = parseInt(String(a.id || '').replace(/\D/g, ''), 10) || 0;
     var bi = parseInt(String(b.id || '').replace(/\D/g, ''), 10) || 0;
     return bi - ai;
