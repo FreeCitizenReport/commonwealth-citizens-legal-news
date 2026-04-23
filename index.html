@@ -543,11 +543,46 @@ function render() {
 
   var crHTML = '';
   if (!r.courtHistory || !r.courtHistory.length) crHTML = '<div style="color:#8b949e;padding:10px;font-size:11px;">No court history</div>';
+  // Court-history entries come in two schemas:
+  //   Richmond (from OCIS court_data.json): { court, courtDate, chargeRefs }
+  //   Henrico (from raw OCIS fields):
+  //     { formattedCaseNum, chargeDesc, codeSection, offenseDate,
+  //       dispositionDate, dispositionDesc, sentence, court (= level code
+  //       like "087G"), courtLevel, defendantName }
+  // Prior behavior only read the Richmond field names, so every Henrico
+  // entry rendered as just "087G" — useless to readers. This merged
+  // renderer shows whichever fields are present on the entry.
   (r.courtHistory || []).forEach(function(ci) {
     crHTML += '<div class="court-card">';
-    crHTML += '<div class="court-name">' + esc(ci.court || '') + '</div>';
-    if (ci.courtDate) crHTML += '<div class="court-date">' + esc(ci.courtDate) + '</div>';
-    if (ci.chargeRefs) crHTML += '<div class="charge-refs">Charges: ' + esc(ci.chargeRefs) + '</div>';
+    // Primary line: prefer the charge description (what the case is about),
+    // fall back to case number, then the court code as last resort.
+    var primary = ci.chargeDesc || ci.formattedCaseNum || ci.caseTrackingID || ci.court || '';
+    crHTML += '<div class="court-name">' + esc(primary) + '</div>';
+    // Secondary: date (offense OR court hearing date) and court code.
+    var date = ci.offenseDate || ci.courtDate || ci.dispositionDate || '';
+    // Only repeat `court` on the secondary line if it wasn't already the primary.
+    var courtTag = (ci.court && ci.court !== primary) ? ci.court : '';
+    if (date || courtTag) {
+      var meta = '';
+      if (date) meta += esc(date);
+      if (date && courtTag) meta += ' &middot; ';
+      if (courtTag) meta += esc(courtTag);
+      crHTML += '<div class="court-date">' + meta + '</div>';
+    }
+    // Tertiary: code section (Henrico) or chargeRefs (Richmond), then
+    // disposition + sentence if present.
+    if (ci.codeSection) {
+      crHTML += '<div class="charge-refs">&sect; ' + esc(ci.codeSection) + '</div>';
+    } else if (ci.chargeRefs) {
+      crHTML += '<div class="charge-refs">Charges: ' + esc(ci.chargeRefs) + '</div>';
+    }
+    if (ci.dispositionDesc || ci.sentence) {
+      var disp = '';
+      if (ci.dispositionDesc) disp += esc(ci.dispositionDesc);
+      if (ci.dispositionDesc && ci.sentence) disp += ' &mdash; ';
+      if (ci.sentence) disp += esc(ci.sentence);
+      crHTML += '<div class="charge-refs">' + disp + '</div>';
+    }
     crHTML += '</div>';
   });
   document.getElementById('court-history-list').innerHTML = crHTML;

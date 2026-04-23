@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Commonwealth Data Health</title>
+<style>
+  :root { color-scheme: dark; }
+  body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 24px; max-width: 1100px; margin: 0 auto; }
+  h1 { margin-top: 0; font-size: 28px; }
+  h2 { margin-top: 32px; font-size: 18px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #30363d; padding-bottom: 6px; }
+  .verdict { padding: 24px; border-radius: 8px; font-size: 24px; font-weight: 800; text-align: center; margin: 24px 0; border: 2px solid; }
+  .verdict.pending { background: #1f2937; border-color: #374151; color: #9ca3af; }
+  .verdict.pass { background: #0a3d1f; border-color: #2ea043; color: #7ee787; }
+  .verdict.warn { background: #3d2f0a; border-color: #d29922; color: #f9e2af; }
+  .verdict.fail { background: #3d0a0a; border-color: #da3633; color: #ff8b8b; }
+  .verdict small { display: block; font-size: 12px; font-weight: 400; margin-top: 8px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; }
+  .timestamp { font-size: 12px; color: #8b949e; margin-bottom: 16px; text-align: right; }
+  button { background: #238636; border: 1px solid #2ea043; color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  button:hover { background: #2ea043; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; }
+  th { color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+  td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; color: #79c0ff; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge.pass { background: #0a3d1f; color: #7ee787; }
+  .badge.warn { background: #3d2f0a; color: #f9e2af; }
+  .badge.fail { background: #3d0a0a; color: #ff8b8b; }
+  .badge.pending { background: #1f2937; color: #9ca3af; }
+  .check { padding: 10px 12px; border-bottom: 1px solid #21262d; display: grid; grid-template-columns: 90px 1fr; gap: 12px; align-items: start; }
+  .check .title { font-weight: 600; }
+  .check .detail { font-size: 13px; color: #8b949e; margin-top: 2px; }
+  .src-RRJ { color: #79c0ff; }
+  .src-Henrico { color: #d2a8ff; }
+  .src-Richmond { color: #56d364; }
+  .src-Peninsula { color: #f9b369; }
+  .src-Arlington { color: #4ecdc4; }
+  .top-comp { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
+  .top-comp div { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; text-align: center; }
+  .top-comp .src { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .top-comp .n { font-size: 28px; font-weight: 800; margin: 4px 0; font-variant-numeric: tabular-nums; }
+  .top-comp .label { font-size: 11px; color: #8b949e; }
+  iframe { display: none; }
+  .footnote { margin-top: 48px; font-size: 12px; color: #6e7681; border-top: 1px solid #21262d; padding-top: 16px; line-height: 1.6; }
+  .footnote code { background: #161b22; padding: 1px 6px; border-radius: 3px; color: #c9d1d9; }
+</style>
+</head>
+<body>
+
+<h1>Commonwealth Data Health</h1>
+<div class="timestamp" id="ts">Last run: initializingâ¦</div>
+
+<div class="verdict pending" id="verdict">Running checksâ¦<small>fetching source data and loading live aggregator</small></div>
+
+<div style="text-align: right;"><button onclick="location.reload()">â» Re-run checks</button></div>
+
+<h2>Sources</h2>
+<table id="sources-table">
+  <thead><tr><th>Source</th><th class="right">Records</th><th class="right">Released</th><th class="right">Newest firstSeenAt</th><th class="right">Data age</th><th>Status</th></tr></thead>
+  <tbody id="sources-body"><tr><td colspan="6" style="color: #6e7681;">Loadingâ¦</td></tr></tbody>
+</table>
+
+<h2>Top 50 composition (from live aggregator)</h2>
+<div class="top-comp" id="top-comp"><div style="grid-column: 1 / -1; color: #6e7681; text-align: center;">Waiting for iframeâ¦</div></div>
+
+<h2>Invariant checks</h2>
+<div id="checks-list"><div class="check"><span class="badge pending">â¦</span><div class="title">Pending</div></div></div>
+
+<h2>parseDate regression tests</h2>
+<div id="parsedate-tests"><div class="check"><span class="badge pending">â¦</span><div class="title">Pending</div></div></div>
+
+<iframe id="live" src="./" sandbox="allow-same-origin allow-scripts"></iframe>
+
+<div class="footnote">
+<p>This page fetches each source's <code>data.json</code> directly, and iframes the live Commonwealth aggregator to read its real <code>RECORDS</code> array and <code>parseDate</code> function. Checks are recomputed on every reload.</p>
+<p>Bookmark this page. If any check turns yellow or red, something about the pipeline has drifted since the last known-good state.</p>
+<p>Bugs this would have caught, each already observed in production: (1) source field rename (Henrico's <code>inmateId</code>/<code>bookingDate</code> instead of <code>id</code>/<code>bookDate</code>) â would fail "â¥80% id coverage" and "â¥80% bookDate coverage" per Henrico. (2) dead scraper (Arlington not automated) â would fail "newest firstSeenAt within 24h". (3) ISO-8601 parseDate regression (Peninsula sunk 14 months) â would fail parseDate smoke tests AND "top 10 records have effective sort date within 7 days".</p>
+</div>
+
+<script>
+const SOURCES = {
+  RRJ:       'https://freecitizenreport.github.io/rrj-viewer/data.json',
+  Henrico:   'https://freecitizenreport.github.io/henrico-viewer/data.json',
+  Richmond:  'https://freecitizenreport.github.io/richmond-viewer/data.json',
+  Peninsula: 'https://freecitizenreport.github.io/peninsula-viewer/data.json',
+  Arlington: 'https://freecitizenreport.github.io/arlington-viewer/data.json',
+};
+
+// Thresholds
+const FRESH_HOURS = 24;    // firstSeenAt within this â pass
+const STALE_HOURS = 72;    // beyond this â fail; between â warn
+const COVERAGE_PASS = 0.90;
+const COVERAGE_WARN = 0.50;
+
+function fmtAge(ms) {
+  if (!ms && ms !== 0) return 'â';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 48) return h + 'h';
+  return Math.floor(h / 24) + 'd';
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+const checks = [];
+function addCheck(title, status, detail, category) {
+  checks.push({ title, status, detail: detail || '', category: category || 'main' });
+}
+
+async function fetchSource(key, url) {
+  try {
+    const r = await fetch(url + '?v=' + Date.now(), { cache: 'no-store' });
+    const lastMod = r.headers.get('last-modified') || '';
+    const data = await r.json();
+    return { key, ok: true, lastMod, count: data.length, data };
+  } catch (e) {
+    return { key, ok: false, error: String(e && e.message || e) };
+  }
+}
+
+function getFirstSeenAt(record) {
+  return record.firstSeenAt || '';
+}
+
+function parseFirstSeen(s) {
+  if (!s) return 0;
+  const t = Date.parse(s);
+  return isNaN(t) ? 0 : t;
+}
+
+async function waitForLiveRecords(iframe, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  return new Promise((resolve, reject) => {
+    const poll = () => {
+      try {
+        const w = iframe.contentWindow;
+        if (w && w.RECORDS && w.RECORDS.length > 0 && typeof w.parseDate === 'function') {
+          return resolve({ win: w, RECORDS: w.RECORDS, parseDate: w.parseDate });
+        }
+      } catch (e) { /* cross-origin, shouldn't happen same-origin but be safe */ }
+      if (Date.now() > deadline) return reject(new Error('Live iframe did not expose RECORDS within ' + timeoutMs + 'ms'));
+      setTimeout(poll, 500);
+    };
+    poll();
+  });
+}
+
+async function runAll() {
+  const now = Date.now();
+  document.getElementById('ts').textContent = 'Last run: ' + new Date().toLocaleString();
+
+  // Fetch sources in parallel
+  const sourceResults = await Promise.all(
+    Object.entries(SOURCES).map(([key, url]) => fetchSource(key, url))
+  );
+
+  // Start waiting for live iframe in parallel
+  const iframe = document.getElementById('live');
+  const livePromise = waitForLiveRecords(iframe, 60000);
+
+  // Render sources table
+  renderSourcesTable(sourceResults, now);
+
+  // Per-source freshness checks
+  for (const s of sourceResults) {
+    if (!s.ok) {
+      addCheck('Fetch ' + s.key + ' data.json', 'fail', s.error || 'fetch failed');
+      continue;
+    }
+    // data.json Last-Modified freshness
+    const modT = s.lastMod ? Date.parse(s.lastMod) : 0;
+    const modAge = modT ? (now - modT) : Infinity;
+    if (modAge < FRESH_HOURS * 3600e3) {
+      addCheck(s.key + ' data.json fresh', 'pass', 'Last-Modified ' + fmtAge(modAge) + ' ago');
+    } else if (modAge < STALE_HOURS * 3600e3) {
+      addCheck(s.key + ' data.json fresh', 'warn', 'Last-Modified ' + fmtAge(modAge) + ' ago (> ' + FRESH_HOURS + 'h)');
+    } else {
+      addCheck(s.key + ' data.json fresh', 'fail', 'Last-Modified ' + fmtAge(modAge) + ' ago (> ' + STALE_HOURS + 'h â scraper likely dead)');
+    }
+
+    // Newest firstSeenAt â catches dead-scraper-but-data.json-recently-touched
+    const firstSeens = s.data.map(getFirstSeenAt).filter(Boolean).map(parseFirstSeen).filter(x => x > 0);
+    const newest = firstSeens.length ? Math.max(...firstSeens) : 0;
+    const newestAge = newest ? (now - newest) : Infinity;
+    if (newestAge < FRESH_HOURS * 3600e3) {
+      addCheck(s.key + ' newest record within ' + FRESH_HOURS + 'h', 'pass', 'Newest firstSeenAt ' + fmtAge(newestAge) + ' ago');
+    } else if (newestAge < STALE_HOURS * 3600e3) {
+      addCheck(s.key + ' newest record within ' + FRESH_HOURS + 'h', 'warn', 'Newest firstSeenAt ' + fmtAge(newestAge) + ' ago');
+    } else {
+      addCheck(s.key + ' newest record within ' + FRESH_HOURS + 'h', 'fail', 'Newest firstSeenAt ' + fmtAge(newestAge) + ' ago â scraper frozen');
+    }
+
+    // Anti-freeze: distinct firstSeenAt count (Arlington-style = all same timestamp)
+    const distinct = new Set(s.data.map(getFirstSeenAt)).size;
+    if (s.data.length >= 20 && distinct === 1) {
+      addCheck(s.key + ' firstSeenAt variance', 'fail', 'All ' + s.data.length + ' records share ONE firstSeenAt value â scraper stopped after initial seed run');
+    } else if (s.data.length >= 20 && distinct < 3) {
+      addCheck(s.key + ' firstSeenAt variance', 'warn', 'Only ' + distinct + ' distinct firstSeenAt values across ' + s.data.length + ' records');
+    } else {
+      addCheck(s.key + ' firstSeenAt variance', 'pass', distinct + ' distinct firstSeenAt values');
+    }
+  }
+
+  // Wait for live iframe
+  let live = null;
+  try {
+    live = await livePromise;
+    addCheck('Live aggregator loaded', 'pass', 'RECORDS length = ' + live.RECORDS.length);
+  } catch (e) {
+    addCheck('Live aggregator loaded', 'fail', e.message);
+    renderAll(sourceResults);
+    return;
+  }
+
+  const LIVE = live.RECORDS;
+  const liveParseDate = live.parseDate;
+
+  // parseDate smoke tests â tests the LIVE function
+  runParseDateTests(liveParseDate);
+
+  // Normalizer coverage â per source in LIVE
+  for (const s of sourceResults) {
+    if (!s.ok) continue;
+    const liveForSource = LIVE.filter(r => r.source === s.key);
+    if (liveForSource.length === 0) {
+      addCheck(s.key + ' present in live aggregator', 'fail', 'Zero normalized records for ' + s.key + ' in live RECORDS');
+      continue;
+    }
+    // Record count parity (fetched count vs live count â should be very close)
+    const parityDelta = Math.abs(liveForSource.length - s.count);
+    const parityRatio = parityDelta / Math.max(1, s.count);
+    if (parityRatio > 0.05) {
+      addCheck(s.key + ' record count parity', 'warn', 'Live has ' + liveForSource.length + ', source has ' + s.count + ' (' + Math.round(parityRatio * 100) + '% delta)');
+    } else {
+      addCheck(s.key + ' record count parity', 'pass', 'Live ' + liveForSource.length + ' vs source ' + s.count);
+    }
+    // Coverage checks: id, bookDate, firstSeenAt
+    const withId = liveForSource.filter(r => r.id).length / liveForSource.length;
+    const withBook = liveForSource.filter(r => r.bookDate).length / liveForSource.length;
+    const withFS = liveForSource.filter(r => r.firstSeenAt).length / liveForSource.length;
+    coverageCheck(s.key, 'id', withId);
+    coverageCheck(s.key, 'bookDate', withBook);
+    coverageCheck(s.key, 'firstSeenAt', withFS);
+  }
+
+  // Top 50 composition
+  const withMugInCustody = LIVE.filter(r => r.mugshot && !r.releaseDate);
+  const top50 = withMugInCustody.slice(0, 50);
+  const top50Comp = {};
+  for (const key of Object.keys(SOURCES)) top50Comp[key] = 0;
+  for (const r of top50) top50Comp[r.source] = (top50Comp[r.source] || 0) + 1;
+  renderTopComposition(top50Comp);
+
+  // Sort participation â every source with >= 10 in-custody mugshot records should appear in top 50
+  for (const key of Object.keys(SOURCES)) {
+    const hasEnough = LIVE.filter(r => r.source === key && r.mugshot && !r.releaseDate).length;
+    const inTop = top50Comp[key];
+    if (hasEnough < 10) {
+      addCheck(key + ' participates in top 50', 'pass', 'Only ' + hasEnough + ' in-custody records â excluded by design');
+    } else if (inTop === 0) {
+      addCheck(key + ' participates in top 50', 'fail', hasEnough + ' in-custody records available but 0 in top 50 â source locked out (sort bug)');
+    } else if (inTop < 2) {
+      addCheck(key + ' participates in top 50', 'warn', 'Only ' + inTop + ' in top 50 despite ' + hasEnough + ' available');
+    } else {
+      addCheck(key + ' participates in top 50', 'pass', inTop + ' in top 50');
+    }
+  }
+
+  // Top 10 freshness â effective sort date within 7 days of now (catches parseDate 14-month regressions)
+  const top10 = top50.slice(0, 10);
+  const weekAgo = now - 7 * 24 * 3600e3;
+  const stale10 = top10.filter(r => {
+    const d = liveParseDate(r.mugshotDate) || liveParseDate(r.bookDate);
+    return d > 0 && d < weekAgo;
+  });
+  if (stale10.length === 0) {
+    addCheck('Top 10 records have recent effective date', 'pass', 'All top-10 effective dates within 7 days');
+  } else {
+    addCheck('Top 10 records have recent effective date', 'fail', stale10.length + ' of 10 top records have effective dates older than 7 days â likely parseDate regression');
+  }
+
+  renderAll(sourceResults);
+}
+
+function coverageCheck(sourceKey, field, ratio) {
+  const pct = Math.round(ratio * 100);
+  const msg = pct + '% of ' + sourceKey + ' records have ' + field;
+  if (ratio >= COVERAGE_PASS) addCheck(sourceKey + ' ' + field + ' coverage', 'pass', msg);
+  else if (ratio >= COVERAGE_WARN) addCheck(sourceKey + ' ' + field + ' coverage', 'warn', msg + ' (below ' + Math.round(COVERAGE_PASS * 100) + '% threshold)');
+  else addCheck(sourceKey + ' ' + field + ' coverage', 'fail', msg + ' â normalizer is silently dropping this field');
+}
+
+function runParseDateTests(parseDate) {
+  const nowD = new Date();
+  const today = nowD.getFullYear() + '-' + String(nowD.getMonth() + 1).padStart(2, '0') + '-' + String(nowD.getDate()).padStart(2, '0');
+  const todayUS = String(nowD.getMonth() + 1).padStart(2, '0') + '/' + String(nowD.getDate()).padStart(2, '0') + '/' + nowD.getFullYear();
+  const twoDays = 2 * 24 * 3600e3;
+  const nowMs = Date.now();
+
+  const tests = [
+    { input: todayUS, desc: 'MM/DD/YYYY today (Richmond-style)' },
+    { input: today,   desc: 'ISO date-only today' },
+    { input: today + 'T12:00:00.031554+00:00', desc: 'ISO-8601 with microseconds (Peninsula-style)' },
+    { input: today + 'T08:20:51-04:00', desc: 'ISO-8601 with TZ offset (Henrico firstSeenAt-style)' },
+    { input: todayUS + ' 7:41 AM', desc: 'MM/DD/YYYY with AM/PM (Arlington-style)' },
+  ];
+
+  const results = tests.map(t => {
+    const got = parseDate(t.input);
+    const delta = Math.abs(got - nowMs);
+    const ok = got > 0 && delta < twoDays;
+    return { ...t, got, ok, gotISO: got > 0 ? new Date(got).toISOString().slice(0, 19) : 'NaN', delta };
+  });
+
+  const container = document.getElementById('parsedate-tests');
+  container.innerHTML = '';
+  for (const r of results) {
+    const div = document.createElement('div');
+    div.className = 'check';
+    const badge = r.ok ? 'pass' : 'fail';
+    const badgeLabel = r.ok ? 'PASS' : 'FAIL';
+    div.innerHTML = '<span class="badge ' + badge + '">' + badgeLabel + '</span>' +
+      '<div><div class="title">' + esc(r.desc) + '</div>' +
+      '<div class="detail">parseDate(<code>' + esc(r.input) + '</code>) = ' + esc(r.gotISO) +
+      (r.ok ? '' : ' â expected within 48h of now, got delta ' + fmtAge(r.delta)) + '</div></div>';
+    container.appendChild(div);
+  }
+
+  const allPass = results.every(r => r.ok);
+  addCheck('parseDate smoke tests', allPass ? 'pass' : 'fail',
+    results.filter(r => !r.ok).length + ' of ' + results.length + ' smoke tests failed');
+}
+
+function renderSourcesTable(results, now) {
+  const tbody = document.getElementById('sources-body');
+  tbody.innerHTML = '';
+  for (const s of results) {
+    const tr = document.createElement('tr');
+    if (!s.ok) {
+      tr.innerHTML = '<td class="src-' + s.key + '"><b>' + esc(s.key) + '</b></td>' +
+        '<td colspan="4" style="color:#ff8b8b;">Fetch failed: ' + esc(s.error || 'unknown') + '</td>' +
+        '<td><span class="badge fail">FAIL</span></td>';
+      tbody.appendChild(tr);
+      continue;
+    }
+    const released = s.data.filter(r => r.releaseDate).length;
+    const firstSeens = s.data.map(getFirstSeenAt).filter(Boolean).map(parseFirstSeen).filter(x => x > 0);
+    const newest = firstSeens.length ? Math.max(...firstSeens) : 0;
+    const newestStr = newest ? new Date(newest).toLocaleString() : 'â';
+    const newestAge = newest ? (now - newest) : Infinity;
+    const modT = s.lastMod ? Date.parse(s.lastMod) : 0;
+    const modAge = modT ? (now - modT) : Infinity;
+    const status = (newestAge < FRESH_HOURS * 3600e3 && modAge < FRESH_HOURS * 3600e3)
+      ? '<span class="badge pass">FRESH</span>'
+      : (newestAge < STALE_HOURS * 3600e3)
+        ? '<span class="badge warn">AGING</span>'
+        : '<span class="badge fail">STALE</span>';
+    tr.innerHTML = '<td class="src-' + s.key + '"><b>' + esc(s.key) + '</b></td>' +
+      '<td class="num">' + s.count + '</td>' +
+      '<td class="num">' + released + '</td>' +
+      '<td class="right">' + esc(newestStr) + '</td>' +
+      '<td class="right">' + fmtAge(modAge) + '</td>' +
+      '<td>' + status + '</td>';
+    tbody.appendChild(tr);
+  }
+}
+
+function renderTopComposition(comp) {
+  const div = document.getElementById('top-comp');
+  div.innerHTML = '';
+  const total = Object.values(comp).reduce((a, b) => a + b, 0) || 1;
+  for (const key of Object.keys(SOURCES)) {
+    const n = comp[key] || 0;
+    const pct = Math.round(n / total * 100);
+    const d = document.createElement('div');
+    d.innerHTML = '<div class="src src-' + key + '">' + esc(key) + '</div>' +
+      '<div class="n">' + n + '</div>' +
+      '<div class="label">' + pct + '%</div>';
+    div.appendChild(d);
+  }
+}
+
+function renderAll(sourceResults) {
+  // Checks list
+  const list = document.getElementById('checks-list');
+  list.innerHTML = '';
+  for (const c of checks) {
+    const div = document.createElement('div');
+    div.className = 'check';
+    div.innerHTML = '<span class="badge ' + c.status + '">' + c.status.toUpperCase() + '</span>' +
+      '<div><div class="title">' + esc(c.title) + '</div>' +
+      '<div class="detail">' + esc(c.detail) + '</div></div>';
+    list.appendChild(div);
+  }
+
+  // Verdict
+  const fails = checks.filter(c => c.status === 'fail').length;
+  const warns = checks.filter(c => c.status === 'warn').length;
+  const v = document.getElementById('verdict');
+  if (fails > 0) {
+    v.className = 'verdict fail';
+    v.innerHTML = fails + ' CHECK' + (fails === 1 ? '' : 'S') + ' FAILING' +
+      (warns > 0 ? ' Â· ' + warns + ' WARNING' + (warns === 1 ? '' : 'S') : '') +
+      '<small>Scroll to see which invariants broke</small>';
+  } else if (warns > 0) {
+    v.className = 'verdict warn';
+    v.innerHTML = warns + ' WARNING' + (warns === 1 ? '' : 'S') + '<small>All critical invariants pass, but some metrics are close to threshold</small>';
+  } else {
+    v.className = 'verdict pass';
+    v.innerHTML = 'ALL ' + checks.length + ' CHECKS PASS<small>Data pipeline is healthy</small>';
+  }
+}
+
+runAll().catch(e => {
+  const v = document.getElementById('verdict');
+  v.className = 'verdict fail';
+  v.innerHTML = 'MONITOR ERROR<small>' + esc(e.message || String(e)) + '</small>';
+  console.error(e);
+});
+</scr)ØÙOÚ[
