@@ -140,7 +140,16 @@ async function waitForLiveRecords(iframe, timeoutMs) {
       try {
         const w = iframe.contentWindow;
         if (w && w.RECORDS && w.RECORDS.length > 0 && typeof w.parseDate === 'function') {
-          return resolve({ win: w, RECORDS: w.RECORDS, parseDate: w.parseDate });
+          // Require ALL sources loaded, not just any. Otherwise we evaluate a
+          // partial state and flag spurious failures (RRJ data.json alone is
+          // 65MB and takes time to download).
+          const sl = w.sourcesLoaded || {};
+          const srcKeys = Object.keys(sl);
+          const allLoaded = srcKeys.length >= 5 && srcKeys.every(k => sl[k] === true);
+          const loadingDone = w.document && w.document.getElementById && w.document.getElementById('loading') && w.document.getElementById('loading').classList.contains('done');
+          if (allLoaded || loadingDone) {
+            return resolve({ win: w, RECORDS: w.RECORDS, parseDate: w.parseDate });
+          }
         }
       } catch (e) { /* cross-origin, shouldn't happen same-origin but be safe */ }
       if (Date.now() > deadline) return reject(new Error('Live iframe did not expose RECORDS within ' + timeoutMs + 'ms'));
