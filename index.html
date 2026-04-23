@@ -302,12 +302,16 @@ function normalizeHenrico(arr) {
       name = last + ', ' + parts.join(' ');
     }
     return {
-      id: r.id || r.bookingNum || '',
+      // Henrico's data.json uses `inmateId` (not `id` / `bookingNum`) and
+      // `bookingDate` (not `bookDate` / `commitmentDate`). Without these
+      // fallbacks, all 1165 Henrico records normalize with empty id + empty
+      // bookDate, which silently sorts them to the bottom of the aggregator.
+      id: r.inmateId || r.id || r.bookingNum || '',
       name: name,
       dob: r.dob || '',
       sex: r.sex || '',
       race: r.race || '',
-      bookDate: fmtDate(r.bookDate || r.commitmentDate || ''),
+      bookDate: fmtDate(r.bookingDate || r.bookDate || r.commitmentDate || ''),
       releaseDate: fmtDate(r.releaseDate || ''),
       charges: (r.charges || []).map(function(c) { return typeof c === 'string' ? { description: c } : c; }),
       bonds: r.bonds || [],
