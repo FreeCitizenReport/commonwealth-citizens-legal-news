@@ -242,6 +242,17 @@ function esc(s) { if (s === null || s === undefined) return ''; return String(s)
 function parseDate(d) {
   if (!d) return 0;
   var s = String(d);
+  // ISO-8601 first. Without this, the MM/DD/YYYY regex below happily matches
+  // the BACKWARDS substring "26-04-23" inside "2026-04-23T..." — parsing it
+  // as month 26 (= Feb of year+2 via JS Date overflow), day 04, year 23
+  // (= 2023). Result: an ISO date like "2026-04-23T12:52:47.031554+00:00"
+  // becomes Feb 4, 2025 — pushing every Peninsula record 14 months into the
+  // past in the sort. Native Date.parse handles ISO correctly including
+  // microseconds (truncated to ms) and timezone offsets.
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    var isoT = Date.parse(s);
+    if (!isNaN(isoT)) return isoT;
+  }
   var m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   if (!m) return 0;
   var y = parseInt(m[3], 10); if (y < 100) y += 2000;
