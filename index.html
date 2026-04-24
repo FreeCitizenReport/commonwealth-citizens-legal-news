@@ -604,7 +604,7 @@ function renderLanding() {
     var label = k.charAt(0).toUpperCase() + k.slice(1);
     bySource[k] = { total: 0, held: 0, label: label };
   });
-  var inv = { RRJ: 'rrj', Henrico: 'henrico', Richmond: 'richmond', Peninsula: 'peninsula', Arlington: 'arlington' };
+  var inv = { RRJ: 'rrj', Henrico: 'henrico', Richmond: 'richmond', Peninsula: 'peninsula', Arlington: 'arlington', 'Virginia Beach': 'virginiabeach' };
   RECORDS.forEach(function(r) {
     var k = inv[r.source]; if (!k) return;
     bySource[k].total++;
