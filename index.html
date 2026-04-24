@@ -56,12 +56,14 @@ a:hover { text-decoration: underline; }
 .src-richmond { background: #1f3d2a; color: #56d364; }
 .src-peninsula { background: #3d2f1f; color: #f9b369; }
 .src-arlington { background: #1f3d3a; color: #4ecdc4; }
+.src-virginia-beach { background: #3d3316; color: #f0b56e; }
 /* Recent-mug card source stripe — same hues as badge colors, keep card bg unchanged */
 #landing .recent-card.src-rrj { border-top: 3px solid #79c0ff; }
 #landing .recent-card.src-henrico { border-top: 3px solid #d2a8ff; }
 #landing .recent-card.src-richmond { border-top: 3px solid #56d364; }
 #landing .recent-card.src-peninsula { border-top: 3px solid #f9b369; }
 #landing .recent-card.src-arlington { border-top: 3px solid #4ecdc4; }
+#landing .recent-card.src-virginia-beach { border-top: 3px solid #f0b56e; }
 
 #landing { display: none; padding: 20px 16px; max-width: 1400px; margin: 0 auto; }
 #landing.active { display: block; }
@@ -171,7 +173,7 @@ a:hover { text-decoration: underline; }
 <div id="disclaimer">Public records. An arrest is not a conviction. All individuals are presumed innocent.</div>
 
 <div id="filter-bar">
-  <div class="filter-group"><label>Source</label><select id="f-source"><option value="">All sources</option><option value="RRJ">Riverside Regional Jail</option><option value="Henrico">Henrico County</option><option value="Richmond">Richmond City</option><option value="Peninsula">Peninsula Regional</option><option value="Arlington">Arlington County</option></select></div>
+  <div class="filter-group"><label>Source</label><select id="f-source"><option value="">All sources</option><option value="RRJ">Riverside Regional Jail</option><option value="Henrico">Henrico County</option><option value="Richmond">Richmond City</option><option value="Peninsula">Peninsula Regional</option><option value="Arlington">Arlington County</option><option value="Virginia Beach">Virginia Beach</option></select></div>
   <div class="filter-group"><label>Custody</label><select id="f-custody"><option value="">All</option><option value="held">In custody</option><option value="released">Released</option></select></div>
   <div class="filter-group"><label>Sex</label><select id="f-sex"><option value="">All</option></select></div>
   <div class="filter-group"><label>Race</label><select id="f-race"><option value="">All</option></select></div>
@@ -216,25 +218,28 @@ var RECORDS = [];
 var mugshotURLs = {};
 var filtered = [];
 var currentIdx = 0;
-var sourcesLoaded = { rrj: false, henrico: false, richmond: false, peninsula: false, arlington: false };
-var SOURCE_KEYS = ['rrj', 'henrico', 'richmond', 'peninsula', 'arlington'];
+var sourcesLoaded = { rrj: false, henrico: false, richmond: false, peninsula: false, arlington: false, virginiabeach: false };
+var SOURCE_KEYS = ['rrj', 'henrico', 'richmond', 'peninsula', 'arlington', 'virginiabeach'];
 var SOURCE_URLS = {
   rrj: 'https://freecitizenreport.github.io/rrj-viewer/data.json',
   henrico: 'https://freecitizenreport.github.io/henrico-viewer/data.json',
   richmond: 'https://freecitizenreport.github.io/richmond-viewer/data.json',
   peninsula: 'https://freecitizenreport.github.io/peninsula-viewer/data.json',
-  arlington: 'https://freecitizenreport.github.io/arlington-viewer/data.json'
+  arlington: 'https://freecitizenreport.github.io/arlington-viewer/data.json',
+  virginiabeach: 'https://freecitizenreport.github.io/virginiabeach-viewer/data.json'
 };
 var SOURCE_LABELS = {
   RRJ: 'Riverside Regional Jail',
   Henrico: 'Henrico County',
   Richmond: 'Richmond City',
   Peninsula: 'Peninsula Regional',
-  Arlington: 'Arlington County'
+  Arlington: 'Arlington County',
+  'Virginia Beach': 'Virginia Beach'
 };
 var SOURCE_CLASSES = {
   RRJ: 'src-rrj', Henrico: 'src-henrico', Richmond: 'src-richmond',
-  Peninsula: 'src-peninsula', Arlington: 'src-arlington'
+  Peninsula: 'src-peninsula', Arlington: 'src-arlington',
+  'Virginia Beach': 'src-virginia-beach'
 };
 
 function esc(s) { if (s === null || s === undefined) return ''; return String(s).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -340,10 +345,12 @@ function normalizeHenrico(arr) {
 function normalizeRichmond(arr) { return normalizeSimple(arr, 'Richmond'); }
 function normalizePeninsula(arr) { return normalizeSimple(arr, 'Peninsula'); }
 function normalizeArlington(arr) { return normalizeSimple(arr, 'Arlington'); }
+function normalizeVirginiaBeach(arr) { return normalizeSimple(arr, 'Virginia Beach'); }
 
 var NORMALIZERS = {
   rrj: normalizeRRJ, henrico: normalizeHenrico, richmond: normalizeRichmond,
-  peninsula: normalizePeninsula, arlington: normalizeArlington
+  peninsula: normalizePeninsula, arlington: normalizeArlington,
+  virginiabeach: normalizeVirginiaBeach
 };
 
 function progress() {
