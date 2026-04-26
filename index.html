@@ -685,6 +685,7 @@ function showHome() {
   document.getElementById('browse').classList.remove('active');
   document.getElementById('btn-home').classList.add('active');
   document.getElementById('btn-browse').classList.remove('active');
+  history.replaceState(null, '', location.pathname);
   renderLanding();
 }
 function showBrowse() {
