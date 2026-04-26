@@ -214,6 +214,8 @@ a:hover { text-decoration: underline; }
 <div id="loading"><div><span class="spinner"></span>Loading <span id="loaded-count">0</span> / 5 sources...</div><div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div></div>
 
 <script>
+// _isReleased helper: future-dated releaseDate (e.g., Henrico projected release) is NOT released yet
+function _isReleased(r){ if(!r||!r.releaseDate) return false; var s=String(r.releaseDate); var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); var t=m ? new Date(+m[3], +m[1]-1, +m[2]).getTime() : Date.parse(s); return !isNaN(t) && t < Date.now(); }
 var RECORDS = [];
 var mugshotURLs = {};
 var filtered = [];
@@ -371,9 +373,6 @@ function finalizeLoad() {
   // Richmond's 5-digit (185308) on same-date ties, so landing-page views
   // were 100% RRJ. firstSeenAt is an ISO timestamp stamped when our scraper
   // first saw the record — genuinely comparable across sources.
-    
-    // _isReleased helper: future-dated releaseDate (e.g., Henrico projected release) is NOT released yet
-    function _isReleased(r){ if(!r||!r.releaseDate) return false; var s=String(r.releaseDate); var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); var t=m ? new Date(+m[3], +m[1]-1, +m[2]).getTime() : Date.parse(s); return !isNaN(t) && t < Date.now(); }
     RECORDS = RECORDS.filter(function(r) { return r.mugshot; });
   RECORDS.sort(function(a, b) {
       // Canonical SORT_RULE.md: retrievedAt DESC with 24h clamp, mugshot filter, custody-agnostic
