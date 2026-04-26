@@ -521,6 +521,7 @@ function render() {
   idHTML += '<div class="id-row"><div class="id-label">Source</div><div class="id-value"><span class="badge badge-source ' + SOURCE_CLASSES[r.source] + '">' + esc(SOURCE_LABELS[r.source] || r.source) + '</span></div></div>';
   idHTML += '<div class="id-row"><div class="id-label">ID #</div><div class="id-value">' + esc(r.id) + '</div></div>';
   idHTML += '<div class="id-row"><div class="id-label">Status</div><div class="id-value"><span class="badge ' + (_isReleased(r) ? 'badge-released">Released ' + esc(fmtDate(r.releaseDate)) : 'badge-held">In custody') + '</span></div></div>';
+    if (r.projectedReleaseDate) idHTML += '<div class="id-row"><div class="id-label">Projected Release</div><div class="id-value">' + esc(fmtDate(r.projectedReleaseDate)) + '</div></div>';
   if (r.bookDate) idHTML += '<div class="id-row"><div class="id-label">Booked</div><div class="id-value">' + esc(fmtDate(r.bookDate)) + '</div></div>';
   if (r.dob) idHTML += '<div class="id-row"><div class="id-label">DOB/Age</div><div class="id-value">' + esc(r.dob) + '</div></div>';
   if (r.sex) idHTML += '<div class="id-row"><div class="id-label">Sex</div><div class="id-value">' + esc(r.sex) + '</div></div>';
