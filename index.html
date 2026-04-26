@@ -371,6 +371,9 @@ function finalizeLoad() {
   // Richmond's 5-digit (185308) on same-date ties, so landing-page views
   // were 100% RRJ. firstSeenAt is an ISO timestamp stamped when our scraper
   // first saw the record — genuinely comparable across sources.
+    
+    // _isReleased helper: future-dated releaseDate (e.g., Henrico projected release) is NOT released yet
+    function _isReleased(r){ if(!r||!r.releaseDate) return false; var s=String(r.releaseDate); var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); var t=m ? new Date(+m[3], +m[1]-1, +m[2]).getTime() : Date.parse(s); return !isNaN(t) && t < Date.now(); }
     RECORDS = RECORDS.filter(function(r) { return r.mugshot; });
   RECORDS.sort(function(a, b) {
       // Canonical SORT_RULE.md: retrievedAt DESC with 24h clamp, mugshot filter, custody-agnostic
@@ -463,8 +466,8 @@ function applyFilters() {
   var court = document.getElementById('f-court').value.toLowerCase();
   filtered = RECORDS.filter(function(r) {
     if (src && r.source !== src) return false;
-    if (cust === 'held' && r.releaseDate) return false;
-    if (cust === 'released' && !r.releaseDate) return false;
+    if (cust === 'held' && _isReleased(r)) return false;
+    if (cust === 'released' && !_isReleased(r)) return false;
     if (sex && r.sex !== sex) return false;
     if (race && r.race !== race) return false;
     if (mug === 'yes' && !r.mugshot) return false;
@@ -516,7 +519,7 @@ function render() {
   idHTML += '<div class="id-row id-name"><div class="id-label">Name</div><div class="id-value">' + esc(r.name) + '</div></div>';
   idHTML += '<div class="id-row"><div class="id-label">Source</div><div class="id-value"><span class="badge badge-source ' + SOURCE_CLASSES[r.source] + '">' + esc(SOURCE_LABELS[r.source] || r.source) + '</span></div></div>';
   idHTML += '<div class="id-row"><div class="id-label">ID #</div><div class="id-value">' + esc(r.id) + '</div></div>';
-  idHTML += '<div class="id-row"><div class="id-label">Status</div><div class="id-value"><span class="badge ' + (r.releaseDate ? 'badge-released">Released ' + esc(fmtDate(r.releaseDate)) : 'badge-held">In custody') + '</span></div></div>';
+  idHTML += '<div class="id-row"><div class="id-label">Status</div><div class="id-value"><span class="badge ' + (_isReleased(r) ? 'badge-released">Released ' + esc(fmtDate(r.releaseDate)) : 'badge-held">In custody') + '</span></div></div>';
   if (r.bookDate) idHTML += '<div class="id-row"><div class="id-label">Booked</div><div class="id-value">' + esc(fmtDate(r.bookDate)) + '</div></div>';
   if (r.dob) idHTML += '<div class="id-row"><div class="id-label">DOB/Age</div><div class="id-value">' + esc(r.dob) + '</div></div>';
   if (r.sex) idHTML += '<div class="id-row"><div class="id-label">Sex</div><div class="id-value">' + esc(r.sex) + '</div></div>';
@@ -612,7 +615,7 @@ function renderLanding() {
   RECORDS.forEach(function(r) {
     var k = inv[r.source]; if (!k) return;
     bySource[k].total++;
-    if (!r.releaseDate) bySource[k].held++;
+    if (!_isReleased(r)) bySource[k].held++;
   });
   var srcHTML = '';
   SOURCE_KEYS.forEach(function(k) {
@@ -628,7 +631,7 @@ function renderLanding() {
   document.getElementById('source-count').textContent = SOURCE_KEYS.filter(function(k) { return bySource[k].total > 0; }).length;
 
   // Recent mugs — top 24 by parseDate(bookDate) with mugshot
-  var withMug = RECORDS.filter(function(r) { return r.mugshot && !r.releaseDate; }).slice(0, 100);
+  var withMug = RECORDS.filter(function(r) { return r.mugshot && !_isReleased(r); }).slice(0, 100);
   var rmHTML = '';
   withMug.forEach(function(r) {
     var gi = RECORDS.indexOf(r);
