@@ -753,8 +753,9 @@ function renderLanding() {
   pageRecords.forEach(function(r) {
     var gi = RECORDS.indexOf(r);
     var url = mugshotURLs[gi] || (r.mugshot ? r.mugshot : '');
-    rmHTML += '<div class="recent-card" data-id="' + esc(r.id) + '">';
-    rmHTML += '<div class="rc-mug">' + (url ? '<img src="' + url + '" alt="" />' : '<div class="nomug">No mugshot</div>') + '</div>';
+    var _srcCls = ({'RRJ':'src-rrj','Henrico':'src-henrico','Richmond':'src-richmond','Peninsula':'src-peninsula','Arlington':'src-arlington','Virginia Beach':'src-virginia-beach'})[r.source]||'';
+    rmHTML += '<div class="recent-card ' + _srcCls + '" data-id="' + esc(r.id) + '">';
+    rmHTML += '<div class="mug">' + (url ? '<img src="' + url + '" alt="" />' : '<div class="nomug">No mugshot</div>') + '</div>';
     rmHTML += '<div class="rc-meta">';
     rmHTML += '<div class="rc-name">' + esc(r.name) + '</div>';
     rmHTML += '<div class="rc-date">' + esc(SOURCE_LABELS[r.source] || r.source) + ' \u00b7 ' + esc(fmtDate(r.bookDate)) + '</div>';
