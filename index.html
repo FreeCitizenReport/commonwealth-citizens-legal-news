@@ -164,6 +164,18 @@ a:hover { text-decoration: underline; }
   #header h1 { font-size: 14px; flex-basis: 100%; }
   #search-wrap { max-width: none; flex-basis: 100%; }
 }
+
+/* Pager + interactive landing */
+.pager-bar { padding: 4px 0; }
+.pager { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 0; }
+.pager-btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+.pager-btn:hover:not(:disabled) { background: #30363d; }
+.pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pager-info { color: #8b949e; font-size: 12px; }
+.pager-empty { color: #8b949e; padding: 16px 0; text-align: center; }
+.source-card { transition: background 0.1s; cursor: pointer; }
+.source-card:hover { background: #1c2128; }
+.source-card.active-filter { outline: 2px solid #58a6ff; }
 </style>
 </head>
 <body>
@@ -198,8 +210,10 @@ a:hover { text-decoration: underline; }
   <div class="filter-group"><label>Sex</label><select id="f-sex"><option value="">All</option></select></div>
   <div class="filter-group"><label>Race</label><select id="f-race"><option value="">All</option></select></div>
   <div class="filter-group"><label>Mugshot</label><select id="f-mug"><option value="">All</option><option value="yes">Has mugshot</option><option value="no">No mugshot</option></select></div>
+  <div class="filter-group"><label>Charge type</label><select id="f-charge-code"><option value="">All charges</option></select></div>
   <div class="filter-group"><label>Charge keyword</label><input id="f-charge" type="text" placeholder="e.g. assault" /></div>
   <div class="filter-group"><label>Court keyword</label><input id="f-court" type="text" placeholder="e.g. Circuit" /></div>
+  <div class="filter-group"><label>Per page</label><select id="f-perpage"><option value="100" selected>100</option><option value="250">250</option><option value="1000">1000</option></select></div>
 </div>
 
 <div id="landing" class="active">
@@ -208,7 +222,9 @@ a:hover { text-decoration: underline; }
   <div id="source-cards" class="source-row"></div>
   <div class="recent-section">
     <h3>Latest mugshots</h3>
+    <div class="pager-bar" id="pager-top"></div>
     <div id="recent-mugs" class="recent-grid"></div>
+    <div class="pager-bar" id="pager-bot"></div>
   </div>
 </div>
 
@@ -240,6 +256,8 @@ var RECORDS = [];
 var mugshotURLs = {};
 var filtered = [];
 var currentIdx = 0;
+var homePage = 0;
+var homePerPage = 100;
 var sourcesLoaded = { rrj: false, henrico: false, richmond: false, peninsula: false, arlington: false, virginiabeach: false };
 var SOURCE_KEYS = ['rrj', 'henrico', 'richmond', 'peninsula', 'arlington', 'virginiabeach'];
 var SOURCE_URLS = {
@@ -419,6 +437,7 @@ function finalizeLoad() {
   });
   document.getElementById('loading').classList.add('done');
   buildFilters();
+  if (typeof populateChargeCodeFilter === "function") populateChargeCodeFilter();
   applyFilters();
   renderLanding();
   preloadBlobs();
@@ -518,6 +537,7 @@ function applyFilters() {
   currentIdx = 0;
   updateCounter();
   if (document.getElementById('browse').classList.contains('active')) render();
+  if (document.getElementById('landing').classList.contains('active')) { homePage = 0; renderLanding(); }
 }
 
 function updateCounter() {
@@ -648,7 +668,7 @@ function renderLanding() {
   SOURCE_KEYS.forEach(function(k) {
     var s = bySource[k];
     var src = Object.keys(inv).filter(function(x) { return inv[x] === k; })[0] || k;
-    srcHTML += '<div class="source-card">';
+    srcHTML += '<div class="source-card" data-source="' + src + '">';
     srcHTML += '<h3><span class="badge badge-source ' + SOURCE_CLASSES[src] + '">' + esc(SOURCE_LABELS[src] || src) + '</span></h3>';
     srcHTML += '<div class="count">' + s.total + '</div>';
     srcHTML += '<div class="held">' + s.held + ' in custody</div>';
@@ -657,17 +677,87 @@ function renderLanding() {
   document.getElementById('source-cards').innerHTML = srcHTML;
   document.getElementById('source-count').textContent = SOURCE_KEYS.filter(function(k) { return bySource[k].total > 0; }).length;
 
-  // Recent mugs — top 24 by parseDate(bookDate) with mugshot
-  var withMug = RECORDS.filter(function(r) { return r.mugshot && !_isReleased(r); }).slice(0, 100);
+  // Recent mugs (filter-aware, paginated)
+  var _src = document.getElementById('f-source').value;
+  var _cust = document.getElementById('f-custody').value;
+  var _sex = document.getElementById('f-sex').value;
+  var _race = document.getElementById('f-race').value;
+  var _mug = document.getElementById('f-mug').value;
+  var _ccode = (document.getElementById('f-charge-code') || {}).value || '';
+  var _charge = (document.getElementById('f-charge').value || '').toLowerCase();
+  var _court = (document.getElementById('f-court').value || '').toLowerCase();
+  var _pp = document.getElementById('f-perpage');
+  if (_pp) homePerPage = parseInt(_pp.value, 10) || 100;
+  function _chMatch(r, code) {
+    if (!code || !r.charges) return false;
+    var ws = code.toUpperCase().split(' ').filter(function(x){return x.length>0;});
+    for (var i = 0; i < r.charges.length; i++) {
+      var rc = r.charges[i];
+      var t = (typeof rc==='string'?rc:(rc.description||rc.charge||rc.text||'')).toUpperCase();
+      var ok = true;
+      for (var j = 0; j < ws.length; j++) { if (t.indexOf(ws[j]) === -1) { ok = false; break; } }
+      if (ok) return true;
+    }
+    return false;
+  }
+  var matched = RECORDS.filter(function(r) {
+    if (_src && r.source !== _src) return false;
+    if (_cust === 'held' && _isReleased(r)) return false;
+    if (_cust === 'released' && !_isReleased(r)) return false;
+    if (_sex && r.sex !== _sex) return false;
+    if (_race && r.race !== _race) return false;
+    if (_mug === 'yes' && !r.mugshot) return false;
+    if (_mug === 'no' && r.mugshot) return false;
+    if (_ccode && !_chMatch(r, _ccode)) return false;
+    if (_charge) {
+      var ok = false;
+      for (var i = 0; i < (r.charges||[]).length; i++) {
+        var rc = r.charges[i];
+        var t = (typeof rc==='string'?rc:(rc.description||rc.charge||rc.text||'')).toLowerCase();
+        if (t.indexOf(_charge) > -1) { ok = true; break; }
+      }
+      if (!ok) return false;
+    }
+    if (_court) {
+      var ok2 = false;
+      for (var i = 0; i < (r.courtHistory||[]).length; i++) {
+        if ((r.courtHistory[i].court || '').toLowerCase().indexOf(_court) > -1) { ok2 = true; break; }
+      }
+      if (!ok2) return false;
+    }
+    if (_mug !== 'no' && !r.mugshot) return false;
+    if (_cust !== 'released' && _isReleased(r)) return false;
+    return true;
+  });
+  var totalPages = Math.max(1, Math.ceil(matched.length / homePerPage));
+  if (homePage >= totalPages) homePage = totalPages - 1;
+  if (homePage < 0) homePage = 0;
+  var pageStart = homePage * homePerPage;
+  var pageRecords = matched.slice(pageStart, pageStart + homePerPage);
+  function _pagerHTML(total, pages) {
+    if (total === 0) return '<div class="pager-empty">No matches for current filters</div>';
+    var dis1 = (homePage===0?' disabled':'');
+    var dis2 = (homePage>=pages-1?' disabled':'');
+    return '<div class="pager">' +
+      '<button class="pager-btn" data-act="first"' + dis1 + '>\u00ab First</button>' +
+      '<button class="pager-btn" data-act="prev"' + dis1 + '>\u2039 Prev</button>' +
+      '<span class="pager-info">Page ' + (homePage+1) + ' of ' + pages + ' \u00b7 ' + total + ' matches</span>' +
+      '<button class="pager-btn" data-act="next"' + dis2 + '>Next \u203a</button>' +
+      '<button class="pager-btn" data-act="last"' + dis2 + '>Last \u00bb</button>' +
+      '</div>';
+  }
+  var pagerH = _pagerHTML(matched.length, totalPages);
+  document.getElementById('pager-top').innerHTML = pagerH;
+  document.getElementById('pager-bot').innerHTML = pagerH;
   var rmHTML = '';
-  withMug.forEach(function(r) {
+  pageRecords.forEach(function(r) {
     var gi = RECORDS.indexOf(r);
-    var url = mugshotURLs[gi] || r.mugshot;
-    rmHTML += '<div class="recent-card ' + (SOURCE_CLASSES[r.source] || '') + '" data-id="' + esc(r.id) + '">';
-    rmHTML += '<div class="mug">' + (r.mugshot ? '<img src="' + esc(url) + '" alt="" />' : '<div class="nomug">No mugshot</div>') + '</div>';
+    var url = mugshotURLs[gi] || (r.mugshot ? r.mugshot : '');
+    rmHTML += '<div class="recent-card" data-id="' + esc(r.id) + '">';
+    rmHTML += '<div class="rc-mug">' + (url ? '<img src="' + url + '" alt="" />' : '<div class="nomug">No mugshot</div>') + '</div>';
     rmHTML += '<div class="rc-meta">';
     rmHTML += '<div class="rc-name">' + esc(r.name) + '</div>';
-    rmHTML += '<div class="rc-date">' + esc(SOURCE_LABELS[r.source] || r.source) + ' · ' + esc(fmtDate(r.bookDate)) + '</div>';
+    rmHTML += '<div class="rc-date">' + esc(SOURCE_LABELS[r.source] || r.source) + ' \u00b7 ' + esc(fmtDate(r.bookDate)) + '</div>';
     rmHTML += '</div></div>';
   });
   document.getElementById('recent-mugs').innerHTML = rmHTML;
@@ -676,6 +766,31 @@ function renderLanding() {
       var id = el.getAttribute('data-id');
       showBrowse();
       goToRecord(id);
+    });
+  });
+  document.querySelectorAll('#pager-top .pager-btn, #pager-bot .pager-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var act = btn.getAttribute('data-act');
+      if (act === 'first') homePage = 0;
+      else if (act === 'prev') homePage = Math.max(0, homePage - 1);
+      else if (act === 'next') homePage = Math.min(totalPages - 1, homePage + 1);
+      else if (act === 'last') homePage = totalPages - 1;
+      renderLanding();
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+  });
+  document.querySelectorAll('#source-cards .source-card').forEach(function(card) {
+    var ck = card.getAttribute('data-source');
+    var fs = document.getElementById('f-source');
+    if (fs && fs.value === ck) card.classList.add('active-filter');
+    card.addEventListener('click', function() {
+      var sk = card.getAttribute('data-source');
+      var f = document.getElementById('f-source');
+      if (f) {
+        f.value = (f.value === sk) ? '' : sk;
+        homePage = 0;
+        renderLanding();
+      }
     });
   });
 }
@@ -735,7 +850,7 @@ document.getElementById('filter-toggle').addEventListener('click', function() {
   document.getElementById('filter-bar').classList.toggle('open');
   this.classList.toggle('active');
 });
-['f-source','f-custody','f-sex','f-race','f-mug','f-charge','f-court'].forEach(function(id) {
+['f-source','f-custody','f-sex','f-race','f-mug','f-charge-code','f-charge','f-court','f-perpage'].forEach(function(id) {
   document.getElementById(id).addEventListener('input', applyFilters);
   document.getElementById(id).addEventListener('change', applyFilters);
 });
@@ -792,6 +907,42 @@ function doSearch() {
 document.addEventListener('click', function(e) {
   if (!e.target.closest('#search-wrap')) document.getElementById('search-results').style.display = 'none';
 });
+
+function populateChargeCodeFilter() {
+  var sel = document.getElementById('f-charge-code');
+  if (!sel || !RECORDS.length) return;
+  function _norm(t){t=t.toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); var stop=/^(THE|A|AN|OF|OR|AND|IN|TO|FROM|FOR|WITH|ON|BY|AT|FIRST|SECOND|THIRD|FOURTH|FELONY|MISDEMEANOR|VA|CODE)$/; var ws=t.split(' ').filter(function(w){return w.length>2&&!stop.test(w);}); return ws.slice(0,3).join(' ');}
+  var rawByKey = {}; var hits = {};
+  RECORDS.forEach(function(r){
+    if (!r.charges) return;
+    var seen = {};
+    r.charges.forEach(function(c){
+      if (!c) return;
+      var raw = (typeof c==='string'?c:(c.description||c.charge||c.text||''));
+      if (!raw) return;
+      var k = _norm(raw);
+      if (k.length<3) return;
+      rawByKey[k] = rawByKey[k] || {};
+      rawByKey[k][raw] = (rawByKey[k][raw]||0) + 1;
+      if (!seen[k]) { seen[k]=true; hits[k]=(hits[k]||0)+1; }
+    });
+  });
+  var arr = Object.keys(hits).map(function(k){
+    var top = Object.keys(rawByKey[k]).sort(function(a,b){return rawByKey[k][b]-rawByKey[k][a];})[0];
+    return [k, hits[k], top];
+  });
+  arr.sort(function(a,b){return b[1]-a[1];});
+  arr = arr.slice(0, 30);
+  var existing = sel.value;
+  var html = '<option value="">All charges</option>';
+  arr.forEach(function(x){
+    var label = (x[2] || x[0]).replace(/\s+/g,' ').trim();
+    if (label.length > 60) label = label.substring(0, 57) + '...';
+    html += '<option value="' + x[0].replace(/"/g,'') + '">' + esc(label) + ' (' + x[1] + ')</option>';
+  });
+  sel.innerHTML = html;
+  if (existing) sel.value = existing;
+}
 </script>
 </body>
 </html>
