@@ -371,23 +371,27 @@ function finalizeLoad() {
   // Richmond's 5-digit (185308) on same-date ties, so landing-page views
   // were 100% RRJ. firstSeenAt is an ISO timestamp stamped when our scraper
   // first saw the record — genuinely comparable across sources.
+    RECORDS = RECORDS.filter(function(r) { return r.mugshot; });
   RECORDS.sort(function(a, b) {
-    var ar = a.releaseDate ? 1 : 0, br = b.releaseDate ? 1 : 0;
-    if (ar !== br) return ar - br;
-    var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
-    if (am !== bm) return am - bm;
-    var ad = parseDate(a.mugshotDate) || parseDate(a.firstSeenAt) || parseDate(a.bookDate);
-    var bd = parseDate(b.mugshotDate) || parseDate(b.firstSeenAt) || parseDate(b.bookDate);
-    if (ad !== bd) return bd - ad;
-    // Cross-jail tiebreaker: most-recently-seen record wins. String compare
-    // on ISO 8601 is equivalent to chronological compare.
-    var afs = a.firstSeenAt || '';
-    var bfs = b.firstSeenAt || '';
-    if (afs !== bfs) return bfs.localeCompare(afs);
-    // Last resort: numeric ID desc (within-jail only meaningful).
-    var ai = parseInt(String(a.id || '').replace(/\D/g, ''), 10) || 0;
-    var bi = parseInt(String(b.id || '').replace(/\D/g, ''), 10) || 0;
-    return bi - ai;
+      // Canonical SORT_RULE.md: retrievedAt DESC with 24h clamp, mugshot filter, custody-agnostic
+      function _pd(s) {
+          if (!s) return NaN;
+          var mm = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+          return mm ? new Date(+mm[3], +mm[1]-1, +mm[2]).getTime() : Date.parse(s);
+      }
+      var fa = a.firstSeenAt ? Date.parse(a.firstSeenAt) : NaN;
+      var fb = b.firstSeenAt ? Date.parse(b.firstSeenAt) : NaN;
+      var ba = _pd(a.bookDate), bb = _pd(b.bookDate);
+      var capA = isNaN(ba) ? Infinity : ba + 86400000;
+      var capB = isNaN(bb) ? Infinity : bb + 86400000;
+      var ra = isNaN(fa) ? (isNaN(ba) ? 0 : ba) : Math.min(fa, capA);
+      var rb = isNaN(fb) ? (isNaN(bb) ? 0 : bb) : Math.min(fb, capB);
+      if (ra !== rb) return rb - ra;
+      var bd = (isNaN(bb) ? 0 : bb) - (isNaN(ba) ? 0 : ba);
+      if (bd) return bd;
+      var nameA = (a.name || ((a.lastName||"") + ", " + (a.firstName||""))).toUpperCase();
+      var nameB = (b.name || ((b.lastName||"") + ", " + (b.firstName||""))).toUpperCase();
+      return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
   });
   document.getElementById('loading').classList.add('done');
   buildFilters();
