@@ -708,7 +708,7 @@ function renderLanding() {
     if (_race && r.race !== _race) return false;
     if (_mug === 'yes' && !r.mugshot) return false;
     if (_mug === 'no' && r.mugshot) return false;
-    if (_ccode && !_chMatch(r, _ccode)) return false;
+    if (_ccode && !window.recordHasChargeGroup(r, _ccode)) return false;
     if (_charge) {
       var ok = false;
       for (var i = 0; i < (r.charges||[]).length; i++) {
@@ -910,11 +910,73 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('#search-wrap')) document.getElementById('search-results').style.display = 'none';
 });
 
+window.CHARGE_GROUPS = [
+  { label: "Probation Violation - Felony", pattern: /(probation|supervision)\\s+violation.*?fel|fel.*?probation\\s+violation/i },
+  { label: "Probation Violation - Misdemeanor", pattern: /(probation|supervision)\\s+violation.*?(misd|misdemeanor)/i },
+  { label: "Probation Violation", pattern: /(probation|supervision)\\s+violation/i },
+  { label: "Possession of Schedule I/II Drugs", pattern: /sched\\.?\\s*i\\s*\\/\\s*ii.*?possession|possession.*?sched(ule)?\\s*i\\s*(or\\s+ii)?|narcotics?\\s+possession\\s+sched(ule)?\\s+i\\s+or\\s+ii/i },
+  { label: "Possession w/ Intent to Distribute", pattern: /possess.*?intent.*?(sell|distribute|deliver|manufacture)|w\\/intent\\s+to\\s+(sell|distribute)/i },
+  { label: "Firearm Use in Commission of Felony", pattern: /firearm\\s+use\\s+in\\s+commission\\s+of\\s+felony/i },
+  { label: "Felon in Possession of Firearm", pattern: /(convicted\\s+felon|felon).*?(possess|transport).*?(firearm|weapon)/i },
+  { label: "Assault on Family Member", pattern: /(simple\\s+)?assault.*?family|domestic.*?assault/i },
+  { label: "Malicious Wounding (Stab/Cut/Wound)", pattern: /(stab|cut|wound).*?malicious|malicious.*?(stab|cut|wound|bodily)/i },
+  { label: "Assault on Law Enforcement", pattern: /assault.*?(law\\.?\\s*enforcement|officer|police)/i },
+  { label: "Petit Larceny <$200", pattern: /pet+y?\\s*larceny.*?(less\\s+than\\s+\\$?200|<\\s*\\$?200|\\$?200|under\\s+\\$?200|first|1st)/i },
+  { label: "Petit Larceny", pattern: /pet+y?\\s*larceny/i },
+  { label: "Grand Larceny", pattern: /grand\\s+larceny/i },
+  { label: "Shoplifting", pattern: /shoplift|conceal.*?merchandise/i },
+  { label: "Trespass After Being Forbidden", pattern: /trespass.*?(forbidden|after\\s+being)/i },
+  { label: "Trespassing", pattern: /trespass/i },
+  { label: "Murder - First Degree", pattern: /murder.*?(first\\s+degree|1st\\s+degree|degree\\s+one)/i },
+  { label: "Murder - Second Degree", pattern: /murder.*?(second\\s+degree|2nd\\s+degree|degree\\s+two)/i },
+  { label: "Murder", pattern: /murder|homicide/i },
+  { label: "Reckless Driving", pattern: /reckless\\s+driv/i },
+  { label: "DUI / Driving While Intoxicated", pattern: /driving\\s+while\\s+intoxicat|\\bdui\\b|\\bdwi\\b/i },
+  { label: "Resisting Arrest / Obstruction of Justice", pattern: /resist.*?arrest|obstruct.*?justice|obstruction\\s+of\\s+justice|fleeing\\s+from\\s+l\\.?e\\.?/i },
+  { label: "Violation of Protective Order", pattern: /protective\\s+order/i },
+  { label: "Failure to Appear (Felony)", pattern: /(fail.*?appear|fta).*?(fel\\b|felony|capias.*?fel)/i },
+  { label: "Failure to Appear (Misdemeanor)", pattern: /(fail.*?appear|fta).*?(misd|sumons|summons|misdemeanor)/i },
+  { label: "Failure to Appear / Capias", pattern: /fail.*?appear|capias|\\bfta\\b/i },
+  { label: "Contempt of Court", pattern: /contempt\\s+of\\s+court/i },
+  { label: "Revocation of Suspended Sentence", pattern: /revocation.*?suspended\\s+sentence|suspended\\s+sentence.*?revoc/i },
+  { label: "Robbery", pattern: /robbery/i },
+  { label: "Burglary / Breaking & Entering", pattern: /burglary|breaking\\s+(and|&)\\s+entering|b\\s*&\\s*e/i },
+  { label: "Carjacking", pattern: /carjack/i },
+  { label: "Strangulation", pattern: /strangulation|strangle/i },
+  { label: "Abduction / Kidnapping", pattern: /abduction|kidnapping|kidnap/i },
+  { label: "Forgery / Uttering", pattern: /forgery|forge|utter/i },
+  { label: "Identity Theft / Fraud", pattern: /identity\\s+(theft|fraud)/i },
+  { label: "Credit Card Fraud / Theft", pattern: /credit\\s+card/i },
+  { label: "Brandishing Firearm", pattern: /brandish/i },
+  { label: "Carrying Concealed Weapon", pattern: /concealed.*?(weapon|firearm)|carry.*?concealed/i },
+  { label: "Possession of Stolen Property", pattern: /stolen\\s+(property|good|firearm)|receive.*?stolen|possess.*?stolen/i },
+  { label: "Hit and Run", pattern: /hit\\s+(and|&)\\s+run/i },
+  { label: "Arson", pattern: /arson/i },
+  { label: "Sex Offense Involving Minor", pattern: /sex.*?(minor|child|juvenile)|child.*?porn|indecent\\s+libert/i },
+  { label: "Sex Offense / Rape", pattern: /\\brape\\b|sodomy|sexual\\s+assault|sexual\\s+battery|object\\s+sexual\\s+penet/i },
+  { label: "Immigration / ICE Hold", pattern: /\\balien\\b|immigration|ice\\s+hold|illegal\\s+alien|authority\\s+to\\s+arrest\\s+illegal/i },
+  { label: "Federal Charge", pattern: /federal\\s+(offense|crime|hold)/i },
+  { label: "Destruction of Property / Vandalism", pattern: /destruction\\s+of\\s+property|damage\\s+to\\s+property|vandal/i },
+  { label: "Disorderly Conduct", pattern: /disorderly/i },
+  { label: "Drunk in Public", pattern: /drunk\\s+in\\s+public|public\\s+intox/i },
+  { label: "Eluding Police", pattern: /eluding/i },
+  { label: "Threats / Intimidation", pattern: /threat|intimidat/i },
+  { label: "Child Abuse / Cruelty", pattern: /child\\s+(abuse|cruelty|neglect)/i },
+  { label: "Desertion / Nonsupport", pattern: /desertion|nonsupport|fail.*?support/i },
+  { label: "Possession of Marijuana", pattern: /marijuana|cannabis/i },
+  { label: "Narcotics Possession (Other)", pattern: /narcotic.*?possess|possess.*?narcotic|drug.*?possess|controlled\\s+substance/i },
+  { label: "Narcotics (Other)", pattern: /narcotic|cocaine|heroin|fentanyl|meth\\b/i },
+  { label: "Assault (Other)", pattern: /assault|battery/i },
+  { label: "Weapons Charge (Other)", pattern: /weapon|firearm|gun/i },
+  { label: "Traffic Violation (Other)", pattern: /traffic|license\\s+(susp|revok)|driv/i },
+];
+window.classifyChargeText = function(text){ var t=String(text||""); for(var i=0;i<window.CHARGE_GROUPS.length;i++){ if(window.CHARGE_GROUPS[i].pattern.test(t)) return window.CHARGE_GROUPS[i].label; } return null; };
+window.recordHasChargeGroup = function(r, label){ if(!label||!r.charges) return false; var rule=null; for(var i=0;i<window.CHARGE_GROUPS.length;i++){ if(window.CHARGE_GROUPS[i].label===label){ rule=window.CHARGE_GROUPS[i]; break; } } if(!rule) return false; for(var i=0;i<r.charges.length;i++){ var c=r.charges[i]; var t=(typeof c==="string"?c:(c.description||c.charge||c.text||"")); if(rule.pattern.test(t)) return true; } return false; };
+
 function populateChargeCodeFilter() {
   var sel = document.getElementById('f-charge-code');
   if (!sel || !RECORDS.length) return;
-  function _norm(t){t=t.toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); var stop=/^(THE|A|AN|OF|OR|AND|IN|TO|FROM|FOR|WITH|ON|BY|AT|FIRST|SECOND|THIRD|FOURTH|FELONY|MISDEMEANOR|VA|CODE)$/; var ws=t.split(' ').filter(function(w){return w.length>2&&!stop.test(w);}); return ws.slice(0,3).join(' ');}
-  var rawByKey = {}; var hits = {};
+  var hits = {};
   RECORDS.forEach(function(r){
     if (!r.charges) return;
     var seen = {};
@@ -922,25 +984,19 @@ function populateChargeCodeFilter() {
       if (!c) return;
       var raw = (typeof c==='string'?c:(c.description||c.charge||c.text||''));
       if (!raw) return;
-      var k = _norm(raw);
-      if (k.length<3) return;
-      rawByKey[k] = rawByKey[k] || {};
-      rawByKey[k][raw] = (rawByKey[k][raw]||0) + 1;
-      if (!seen[k]) { seen[k]=true; hits[k]=(hits[k]||0)+1; }
+      var label = window.classifyChargeText ? window.classifyChargeText(raw) : null;
+      if (!label || seen[label]) return;
+      seen[label] = true;
+      hits[label] = (hits[label]||0) + 1;
     });
   });
-  var arr = Object.keys(hits).map(function(k){
-    var top = Object.keys(rawByKey[k]).sort(function(a,b){return rawByKey[k][b]-rawByKey[k][a];})[0];
-    return [k, hits[k], top];
-  });
+  var arr = Object.keys(hits).map(function(k){return [k, hits[k]];});
   arr.sort(function(a,b){return b[1]-a[1];});
   arr = arr.slice(0, 30);
   var existing = sel.value;
   var html = '<option value="">All charges</option>';
   arr.forEach(function(x){
-    var label = (x[2] || x[0]).replace(/\s+/g,' ').trim();
-    if (label.length > 60) label = label.substring(0, 57) + '...';
-    html += '<option value="' + x[0].replace(/"/g,'') + '">' + esc(label) + ' (' + x[1] + ')</option>';
+    html += '<option value="' + x[0].replace(/"/g,'&quot;') + '">' + esc(x[0]) + ' (' + x[1] + ')</option>';
   });
   sel.innerHTML = html;
   if (existing) sel.value = existing;
