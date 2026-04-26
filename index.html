@@ -376,8 +376,8 @@ function finalizeLoad() {
     if (ar !== br) return ar - br;
     var am = a.mugshot ? 0 : 1, bm = b.mugshot ? 0 : 1;
     if (am !== bm) return am - bm;
-    var ad = parseDate(a.mugshotDate) || parseDate(a.bookDate);
-    var bd = parseDate(b.mugshotDate) || parseDate(b.bookDate);
+    var ad = parseDate(a.mugshotDate) || parseDate(a.firstSeenAt) || parseDate(a.bookDate);
+    var bd = parseDate(b.mugshotDate) || parseDate(b.firstSeenAt) || parseDate(b.bookDate);
     if (ad !== bd) return bd - ad;
     // Cross-jail tiebreaker: most-recently-seen record wins. String compare
     // on ISO 8601 is equivalent to chronological compare.
