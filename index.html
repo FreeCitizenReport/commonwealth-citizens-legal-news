@@ -123,6 +123,26 @@ a:hover { text-decoration: underline; }
 .court-card .court-name { font-weight: 600; color: #f0f6fc; margin-bottom: 2px; }
 .court-card .court-date { color: #8b949e; }
 .court-card .charge-refs { color: #58a6ff; font-size: 10px; margin-top: 2px; }
+.court-card { cursor: pointer; transition: border-color 0.15s; }
+.court-card:hover { border-color: #388bfd60; }
+.court-card .cc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 4px; }
+.court-card .cc-main { flex: 1; min-width: 0; }
+.court-card .cc-exp-icon { color: #6e7681; font-size: 12px; flex-shrink: 0; padding-top: 2px; transition: transform 0.2s; }
+.court-card.expanded .cc-exp-icon { transform: rotate(180deg); }
+.court-card .court-court-name { color: #6e7681; font-size: 10px; margin-top: 1px; }
+.court-card .court-outcome { color: #3fb950; font-size: 10px; margin-top: 3px; font-weight: 600; }
+.court-card.expanded { border-color: #388bfd; background: #0a1628; }
+.court-detail-pane { display: none; margin-top: 6px; padding-top: 6px; border-top: 1px solid #21262d; }
+.court-card.expanded .court-detail-pane { display: block; }
+.cd-row { display: flex; gap: 6px; margin-bottom: 3px; font-size: 10px; }
+.cd-lbl { color: #6e7681; min-width: 80px; flex-shrink: 0; }
+.cd-val { color: #c9d1d9; }
+.cd-hearings-lbl { color: #6e7681; font-size: 10px; font-weight: 600; margin: 5px 0 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+.cd-hr { display: flex; gap: 8px; font-size: 10px; padding: 2px 0; border-bottom: 1px solid #161b22; }
+.cd-hd { color: #8b949e; min-width: 72px; }
+.cd-hr-r { font-weight: 600; }
+.hr-g { color: #3fb950; } .hr-d { color: #58a6ff; } .hr-c { color: #e3b341; }
+.cd-hp { color: #6e7681; }
 
 #ad-panel { max-width: 1600px; margin: 12px auto 20px; padding: 0 12px; }
 #ad-panel .ad-box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; text-align: center; font-size: 12px; color: #8b949e; }
@@ -402,7 +422,13 @@ function finalizeLoad() {
   applyFilters();
   renderLanding();
   preloadBlobs();
-  handleDeepLink();
+  window.COURT_DETAILS = {};
+fetch('court_details.json').then(function(rr){return rr.json();}).then(function(d){window.COURT_DETAILS=d;}).catch(function(){});
+document.getElementById('court-history-list').addEventListener('click', function(e) {
+  var card = e.target.closest('.court-card');
+  if (card) card.classList.toggle('expanded');
+});
+handleDeepLink();
 }
 
 function fetchSource(key) {
@@ -558,50 +584,49 @@ function render() {
   document.getElementById('charges-list').innerHTML = chHTML;
 
   var crHTML = '';
-  if (!r.courtHistory || !r.courtHistory.length) crHTML = '<div style="color:#8b949e;padding:10px;font-size:11px;">No court history</div>';
-  // Court-history entries come in two schemas:
-  //   Richmond (from OCIS court_data.json): { court, courtDate, chargeRefs }
-  //   Henrico (from raw OCIS fields):
-  //     { formattedCaseNum, chargeDesc, codeSection, offenseDate,
-  //       dispositionDate, dispositionDesc, sentence, court (= level code
-  //       like "087G"), courtLevel, defendantName }
-  // Prior behavior only read the Richmond field names, so every Henrico
-  // entry rendered as just "087G" — useless to readers. This merged
-  // renderer shows whichever fields are present on the entry.
+  if (!r.courtHistory || !r.courtHistory.length) { crHTML = '<div style="color:#8b949e;padding:10px;font-size:11px;">No court history</div>'; } else {
+  var _ctn = function(c) { if (!c) return ''; var m = String(c).match(/^(\d{2,3})([GCJD])$/i); if (!m) return ''; var f=m[1],t=m[2].toUpperCase(); var L={'036':'Charles City','041':'Chesterfield','049':'Cumberland','059':'Fairfax','075':'Goochland','085':'Hanover','087':'Henrico','099':'King & Queen','109':'Louisa','127':'New Kent','134':'Loudoun','145':'Powhatan','149':'Prince George','183':'Virginia Beach','520':'Bristol','550':'Chesterfield','700':'Hampton','710':'Norfolk','730':'Portsmouth','760':'Richmond City','770':'Roanoke','800':'Suffolk','840':'Chesapeake','570':'Colonial Heights'}; var T={'G':'General District Court','C':'Circuit Court','J':'Juvenile & Domestic Relations','D':'District Court'}; return (L[f]||'Locality '+f)+' '+(T[t]||t); };
+  var _CD = window.COURT_DETAILS || {};
   (r.courtHistory || []).forEach(function(ci) {
-    crHTML += '<div class="court-card">';
-    // Primary line: prefer the charge description (what the case is about),
-    // fall back to case number, then the court code as last resort.
     var primary = ci.chargeDesc || ci.formattedCaseNum || ci.caseTrackingID || ci.court || '';
-    crHTML += '<div class="court-name">' + esc(primary) + '</div>';
-    // Secondary: date (offense OR court hearing date) and court code.
+    var courtName = _ctn(ci.court || ci.courtLevel || '');
     var date = ci.offenseDate || ci.courtDate || ci.dispositionDate || '';
-    // Only repeat `court` on the secondary line if it wasn't already the primary.
-    var courtTag = (ci.court && ci.court !== primary) ? ci.court : '';
-    if (date || courtTag) {
-      var meta = '';
-      if (date) meta += esc(date);
-      if (date && courtTag) meta += ' &middot; ';
-      if (courtTag) meta += esc(courtTag);
-      crHTML += '<div class="court-date">' + meta + '</div>';
-    }
-    // Tertiary: code section (Henrico) or chargeRefs (Richmond), then
-    // disposition + sentence if present.
-    if (ci.codeSection) {
-      crHTML += '<div class="charge-refs">&sect; ' + esc(ci.codeSection) + '</div>';
-    } else if (ci.chargeRefs) {
-      crHTML += '<div class="charge-refs">Charges: ' + esc(ci.chargeRefs) + '</div>';
-    }
-    if (ci.dispositionDesc || ci.sentence) {
-      var disp = '';
-      if (ci.dispositionDesc) disp += esc(ci.dispositionDesc);
-      if (ci.dispositionDesc && ci.sentence) disp += ' &mdash; ';
-      if (ci.sentence) disp += esc(ci.sentence);
-      crHTML += '<div class="charge-refs">' + disp + '</div>';
-    }
+    var caseKey = ci.formattedCaseNum || ci.caseTrackingID || '';
+    var det = _CD[caseKey] || {};
+    var outcome = '';
+    if (ci.dispositionDesc) { outcome = esc(ci.dispositionDesc); if (ci.sentence) outcome += ' — ' + esc(ci.sentence); } else if (ci.sentence) { outcome = esc(ci.sentence); }
+    var xHTML = '';
+    if (caseKey) xHTML += '<div class="cd-row"><span class="cd-lbl">Case #</span><span class="cd-val">' + esc(caseKey) + '</span></div>';
+    if (courtName) xHTML += '<div class="cd-row"><span class="cd-lbl">Court</span><span class="cd-val">' + esc(courtName) + '</span></div>';
+    var offDate = ci.offenseDate || det.offense || '';
+    if (offDate) xHTML += '<div class="cd-row"><span class="cd-lbl">Offense date</span><span class="cd-val">' + esc(offDate) + '</span></div>';
+    if (det.filed) xHTML += '<div class="cd-row"><span class="cd-lbl">Filed</span><span class="cd-val">' + esc(det.filed) + '</span></div>';
+    if (det.origCharge) { xHTML += '<div class="cd-row"><span class="cd-lbl">Charge</span><span class="cd-val">' + esc(det.origCharge.desc||'') + '</span></div>'; if (det.origCharge.code) xHTML += '<div class="cd-row"><span class="cd-lbl">Statute</span><span class="cd-val">§ ' + esc(det.origCharge.code) + '</span></div>'; var clsLbl = det.origCharge.type==='F'?'Felony'+(det.origCharge.cls?' Class '+det.origCharge.cls:''):det.origCharge.type==='M'?'Misdemeanor'+(det.origCharge.cls?' Class '+det.origCharge.cls:''):''; if (clsLbl) xHTML += '<div class="cd-row"><span class="cd-lbl">Severity</span><span class="cd-val">' + esc(clsLbl) + '</span></div>'; } else if (ci.codeSection) { xHTML += '<div class="cd-row"><span class="cd-lbl">Statute</span><span class="cd-val">§ ' + esc(ci.codeSection) + '</span></div>'; }
+    if (det.amendCharge) xHTML += '<div class="cd-row"><span class="cd-lbl">Amended to</span><span class="cd-val">' + esc(det.amendCharge.desc||'') + '</span></div>';
+    var dispDate = ci.dispositionDate || (det.disp ? det.disp.date : '');
+    var dispDesc = ci.dispositionDesc || (det.disp ? det.disp.code : '');
+    if (dispDate || dispDesc) xHTML += '<div class="cd-row"><span class="cd-lbl">Disposition</span><span class="cd-val">' + esc((dispDate ? dispDate+' — ' : '')+dispDesc) + '</span></div>';
+    if (ci.sentence || det.sent) xHTML += '<div class="cd-row"><span class="cd-lbl">Sentence</span><span class="cd-val">' + esc(ci.sentence||det.sent||'') + '</span></div>';
+    if (det.susp) xHTML += '<div class="cd-row"><span class="cd-lbl">Suspended</span><span class="cd-val">' + esc(det.susp) + '</span></div>';
+    if (det.prob) xHTML += '<div class="cd-row"><span class="cd-lbl">Probation</span><span class="cd-val">' + esc(det.prob) + '</span></div>';
+    if (det.fine > 0) xHTML += '<div class="cd-row"><span class="cd-lbl">Fine</span><span class="cd-val">$' + det.fine + '</span></div>';
+    if (det.costs > 0) xHTML += '<div class="cd-row"><span class="cd-lbl">Costs</span><span class="cd-val">$' + det.costs + '</span></div>';
+    if (ci.chargeRefs && !det.origCharge) xHTML += '<div class="cd-row"><span class="cd-lbl">Charges</span><span class="cd-val">' + esc(ci.chargeRefs) + '</span></div>';
+    if (det.hearings && det.hearings.length) { var rmap={'G':'Guilty','C':'Continued','W':'Guilty (Waiver)','A':'Amended','D':'Dismissed','N':'Not Guilty','P':'Prepaid','T':'Trial','S':'Submitted'}; xHTML += '<div class="cd-hearings-lbl">Hearings</div>'; det.hearings.forEach(function(h){var rc=h.result||'';var rn=rmap[rc]||rc;var rcls=(rc==='G'||rc==='W'||rc==='P')?'hr-g':(rc==='D'||rc==='N')?'hr-d':(rc==='C')?'hr-c':'';xHTML+='<div class="cd-hr"><span class="cd-hd">'+esc(h.date||'')+'</span><span class="cd-hr-r '+rcls+'">'+esc(rn)+'</span>'+(h.plea?'<span class="cd-hp">Plea: '+esc(h.plea)+'</span>':'')+'</div>';}); }
+    crHTML += '<div class="court-card">';
+    crHTML += '<div class="cc-hdr"><div class="cc-main">';
+    crHTML += '<div class="court-name">' + esc(primary) + '</div>';
+    if (date) crHTML += '<div class="court-date">' + esc(date) + '</div>';
+    if (courtName) crHTML += '<div class="court-court-name">' + esc(courtName) + '</div>';
+    if (outcome) crHTML += '<div class="court-outcome">' + outcome + '</div>';
+    if (ci.codeSection) crHTML += '<div class="charge-refs">§ ' + esc(ci.codeSection) + '</div>';
+    else if (ci.chargeRefs) crHTML += '<div class="charge-refs">Charges: ' + esc(ci.chargeRefs) + '</div>';
+    crHTML += '</div><div class="cc-exp-icon">▾</div></div>';
+    crHTML += '<div class="court-detail-pane">' + xHTML + '</div>';
     crHTML += '</div>';
   });
-  document.getElementById('court-history-list').innerHTML = crHTML;
+  }
+document.getElementById('court-history-list').innerHTML = crHTML;
 
   if (r.id) history.replaceState(null, '', '?id=' + encodeURIComponent(r.id));
 }
