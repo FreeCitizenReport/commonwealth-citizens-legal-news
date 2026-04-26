@@ -48,33 +48,33 @@
 <body>
 
 <h1>Commonwealth Data Health</h1>
-<div class="timestamp" id="ts">Last run: initializingâ¦</div>
+<div class="timestamp" id="ts">Last run: initializing…</div>
 
-<div class="verdict pending" id="verdict">Running checksâ¦<small>fetching source data and loading live aggregator</small></div>
+<div class="verdict pending" id="verdict">Running checks…<small>fetching source data and loading live aggregator</small></div>
 
-<div style="text-align: right;"><button onclick="location.reload()">â» Re-run checks</button></div>
+<div style="text-align: right;"><button onclick="location.reload()">↻ Re-run checks</button></div>
 
 <h2>Sources</h2>
 <table id="sources-table">
   <thead><tr><th>Source</th><th class="right">Records</th><th class="right">Released</th><th class="right">Newest firstSeenAt</th><th class="right">Data age</th><th>Status</th></tr></thead>
-  <tbody id="sources-body"><tr><td colspan="6" style="color: #6e7681;">Loadingâ¦</td></tr></tbody>
+  <tbody id="sources-body"><tr><td colspan="6" style="color: #6e7681;">Loading…</td></tr></tbody>
 </table>
 
 <h2>Top 50 composition (from live aggregator)</h2>
-<div class="top-comp" id="top-comp"><div style="grid-column: 1 / -1; color: #6e7681; text-align: center;">Waiting for iframeâ¦</div></div>
+<div class="top-comp" id="top-comp"><div style="grid-column: 1 / -1; color: #6e7681; text-align: center;">Waiting for iframe…</div></div>
 
 <h2>Invariant checks</h2>
-<div id="checks-list"><div class="check"><span class="badge pending">â¦</span><div class="title">Pending</div></div></div>
+<div id="checks-list"><div class="check"><span class="badge pending">…</span><div class="title">Pending</div></div></div>
 
 <h2>parseDate regression tests</h2>
-<div id="parsedate-tests"><div class="check"><span class="badge pending">â¦</span><div class="title">Pending</div></div></div>
+<div id="parsedate-tests"><div class="check"><span class="badge pending">…</span><div class="title">Pending</div></div></div>
 
 <iframe id="live" src="./" sandbox="allow-same-origin allow-scripts"></iframe>
 
 <div class="footnote">
 <p>This page fetches each source's <code>data.json</code> directly, and iframes the live Commonwealth aggregator to read its real <code>RECORDS</code> array and <code>parseDate</code> function. Checks are recomputed on every reload.</p>
 <p>Bookmark this page. If any check turns yellow or red, something about the pipeline has drifted since the last known-good state.</p>
-<p>Bugs this would have caught, each already observed in production: (1) source field rename (Henrico's <code>inmateId</code>/<code>bookingDate</code> instead of <code>id</code>/<code>bookDate</code>) â would fail "â¥80% id coverage" and "â¥80% bookDate coverage" per Henrico. (2) dead scraper (Arlington not automated) â would fail "newest firstSeenAt within 24h". (3) ISO-8601 parseDate regression (Peninsula sunk 14 months) â would fail parseDate smoke tests AND "top 10 records have effective sort date within 7 days".</p>
+<p>Bugs this would have caught, each already observed in production: (1) source field rename (Henrico's <code>inmateId</code>/<code>bookingDate</code> instead of <code>id</code>/<code>bookDate</code>) — would fail "≥80% id coverage" and "≥80% bookDate coverage" per Henrico. (2) dead scraper (Arlington not automated) — would fail "newest firstSeenAt within 24h". (3) ISO-8601 parseDate regression (Peninsula sunk 14 months) — would fail parseDate smoke tests AND "top 10 records have effective sort date within 7 days".</p>
 </div>
 
 <script>
@@ -87,13 +87,13 @@ const SOURCES = {
 };
 
 // Thresholds
-const FRESH_HOURS = 24;    // firstSeenAt within this â pass
-const STALE_HOURS = 72;    // beyond this â fail; between â warn
+const FRESH_HOURS = 24;    // firstSeenAt within this → pass
+const STALE_HOURS = 72;    // beyond this → fail; between → warn
 const COVERAGE_PASS = 0.90;
 const COVERAGE_WARN = 0.50;
 
 function fmtAge(ms) {
-  if (!ms && ms !== 0) return 'â';
+  if (!ms && ms !== 0) return '—';
   const s = Math.floor(ms / 1000);
   if (s < 60) return s + 's';
   const m = Math.floor(s / 60);
@@ -189,10 +189,10 @@ async function runAll() {
     } else if (modAge < STALE_HOURS * 3600e3) {
       addCheck(s.key + ' data.json fresh', 'warn', 'Last-Modified ' + fmtAge(modAge) + ' ago (> ' + FRESH_HOURS + 'h)');
     } else {
-      addCheck(s.key + ' data.json fresh', 'fail', 'Last-Modified ' + fmtAge(modAge) + ' ago (> ' + STALE_HOURS + 'h â scraper likely dead)');
+      addCheck(s.key + ' data.json fresh', 'fail', 'Last-Modified ' + fmtAge(modAge) + ' ago (> ' + STALE_HOURS + 'h — scraper likely dead)');
     }
 
-    // Newest firstSeenAt â catches dead-scraper-but-data.json-recently-touched
+    // Newest firstSeenAt — catches dead-scraper-but-data.json-recently-touched
     const firstSeens = s.data.map(getFirstSeenAt).filter(Boolean).map(parseFirstSeen).filter(x => x > 0);
     const newest = firstSeens.length ? Math.max(...firstSeens) : 0;
     const newestAge = newest ? (now - newest) : Infinity;
@@ -201,13 +201,13 @@ async function runAll() {
     } else if (newestAge < STALE_HOURS * 3600e3) {
       addCheck(s.key + ' newest record within ' + FRESH_HOURS + 'h', 'warn', 'Newest firstSeenAt ' + fmtAge(newestAge) + ' ago');
     } else {
-      addCheck(s.key + ' newest record within ' + FRESH_HOURS + 'h', 'fail', 'Newest firstSeenAt ' + fmtAge(newestAge) + ' ago â scraper frozen');
+      addCheck(s.key + ' newest record within ' + FRESH_HOURS + 'h', 'fail', 'Newest firstSeenAt ' + fmtAge(newestAge) + ' ago — scraper frozen');
     }
 
     // Anti-freeze: distinct firstSeenAt count (Arlington-style = all same timestamp)
     const distinct = new Set(s.data.map(getFirstSeenAt)).size;
     if (s.data.length >= 20 && distinct === 1) {
-      addCheck(s.key + ' firstSeenAt variance', 'fail', 'All ' + s.data.length + ' records share ONE firstSeenAt value â scraper stopped after initial seed run');
+      addCheck(s.key + ' firstSeenAt variance', 'fail', 'All ' + s.data.length + ' records share ONE firstSeenAt value — scraper stopped after initial seed run');
     } else if (s.data.length >= 20 && distinct < 3) {
       addCheck(s.key + ' firstSeenAt variance', 'warn', 'Only ' + distinct + ' distinct firstSeenAt values across ' + s.data.length + ' records');
     } else {
@@ -229,10 +229,10 @@ async function runAll() {
   const LIVE = live.RECORDS;
   const liveParseDate = live.parseDate;
 
-  // parseDate smoke tests â tests the LIVE function
+  // parseDate smoke tests — tests the LIVE function
   runParseDateTests(liveParseDate);
 
-  // Normalizer coverage â per source in LIVE
+  // Normalizer coverage — per source in LIVE
   for (const s of sourceResults) {
     if (!s.ok) continue;
     const liveForSource = LIVE.filter(r => r.source === s.key);
@@ -240,7 +240,7 @@ async function runAll() {
       addCheck(s.key + ' present in live aggregator', 'fail', 'Zero normalized records for ' + s.key + ' in live RECORDS');
       continue;
     }
-    // Record count parity (fetched count vs live count â should be very close)
+    // Record count parity (fetched count vs live count — should be very close)
     const parityDelta = Math.abs(liveForSource.length - s.count);
     const parityRatio = parityDelta / Math.max(1, s.count);
     if (parityRatio > 0.05) {
@@ -265,14 +265,14 @@ async function runAll() {
   for (const r of top50) top50Comp[r.source] = (top50Comp[r.source] || 0) + 1;
   renderTopComposition(top50Comp);
 
-  // Sort participation â every source with >= 10 in-custody mugshot records should appear in top 50
+  // Sort participation — every source with >= 10 in-custody mugshot records should appear in top 50
   for (const key of Object.keys(SOURCES)) {
     const hasEnough = LIVE.filter(r => r.source === key && r.mugshot && !r.releaseDate).length;
     const inTop = top50Comp[key];
     if (hasEnough < 10) {
-      addCheck(key + ' participates in top 50', 'pass', 'Only ' + hasEnough + ' in-custody records â excluded by design');
+      addCheck(key + ' participates in top 50', 'pass', 'Only ' + hasEnough + ' in-custody records — excluded by design');
     } else if (inTop === 0) {
-      addCheck(key + ' participates in top 50', 'fail', hasEnough + ' in-custody records available but 0 in top 50 â source locked out (sort bug)');
+      addCheck(key + ' participates in top 50', 'fail', hasEnough + ' in-custody records available but 0 in top 50 — source locked out (sort bug)');
     } else if (inTop < 2) {
       addCheck(key + ' participates in top 50', 'warn', 'Only ' + inTop + ' in top 50 despite ' + hasEnough + ' available');
     } else {
@@ -280,7 +280,7 @@ async function runAll() {
     }
   }
 
-  // Top 10 freshness â effective sort date within 7 days of now (catches parseDate 14-month regressions)
+  // Top 10 freshness — effective sort date within 7 days of now (catches parseDate 14-month regressions)
   const top10 = top50.slice(0, 10);
   const weekAgo = now - 7 * 24 * 3600e3;
   const stale10 = top10.filter(r => {
@@ -290,7 +290,7 @@ async function runAll() {
   if (stale10.length === 0) {
     addCheck('Top 10 records have recent effective date', 'pass', 'All top-10 effective dates within 7 days');
   } else {
-    addCheck('Top 10 records have recent effective date', 'fail', stale10.length + ' of 10 top records have effective dates older than 7 days â likely parseDate regression');
+    addCheck('Top 10 records have recent effective date', 'fail', stale10.length + ' of 10 top records have effective dates older than 7 days — likely parseDate regression');
   }
 
   renderAll(sourceResults);
@@ -301,7 +301,7 @@ function coverageCheck(sourceKey, field, ratio) {
   const msg = pct + '% of ' + sourceKey + ' records have ' + field;
   if (ratio >= COVERAGE_PASS) addCheck(sourceKey + ' ' + field + ' coverage', 'pass', msg);
   else if (ratio >= COVERAGE_WARN) addCheck(sourceKey + ' ' + field + ' coverage', 'warn', msg + ' (below ' + Math.round(COVERAGE_PASS * 100) + '% threshold)');
-  else addCheck(sourceKey + ' ' + field + ' coverage', 'fail', msg + ' â normalizer is silently dropping this field');
+  else addCheck(sourceKey + ' ' + field + ' coverage', 'fail', msg + ' — normalizer is silently dropping this field');
 }
 
 function runParseDateTests(parseDate) {
@@ -336,7 +336,7 @@ function runParseDateTests(parseDate) {
     div.innerHTML = '<span class="badge ' + badge + '">' + badgeLabel + '</span>' +
       '<div><div class="title">' + esc(r.desc) + '</div>' +
       '<div class="detail">parseDate(<code>' + esc(r.input) + '</code>) = ' + esc(r.gotISO) +
-      (r.ok ? '' : ' â expected within 48h of now, got delta ' + fmtAge(r.delta)) + '</div></div>';
+      (r.ok ? '' : ' — expected within 48h of now, got delta ' + fmtAge(r.delta)) + '</div></div>';
     container.appendChild(div);
   }
 
@@ -360,7 +360,7 @@ function renderSourcesTable(results, now) {
     const released = s.data.filter(r => r.releaseDate).length;
     const firstSeens = s.data.map(getFirstSeenAt).filter(Boolean).map(parseFirstSeen).filter(x => x > 0);
     const newest = firstSeens.length ? Math.max(...firstSeens) : 0;
-    const newestStr = newest ? new Date(newest).toLocaleString() : 'â';
+    const newestStr = newest ? new Date(newest).toLocaleString() : '—';
     const newestAge = newest ? (now - newest) : Infinity;
     const modT = s.lastMod ? Date.parse(s.lastMod) : 0;
     const modAge = modT ? (now - modT) : Infinity;
@@ -414,7 +414,7 @@ function renderAll(sourceResults) {
   if (fails > 0) {
     v.className = 'verdict fail';
     v.innerHTML = fails + ' CHECK' + (fails === 1 ? '' : 'S') + ' FAILING' +
-      (warns > 0 ? ' Â· ' + warns + ' WARNING' + (warns === 1 ? '' : 'S') : '') +
+      (warns > 0 ? ' · ' + warns + ' WARNING' + (warns === 1 ? '' : 'S') : '') +
       '<small>Scroll to see which invariants broke</small>';
   } else if (warns > 0) {
     v.className = 'verdict warn';
