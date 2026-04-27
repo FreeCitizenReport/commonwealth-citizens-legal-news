@@ -1047,6 +1047,12 @@ window.isCourtRefCharge = function(text){ if(!text) return false; var t=String(t
 // Merge court history from per-jail viewers (Peninsula + Richmond not covered by primary pipeline)
 (function _mergeExtraCourt(){
   if (typeof RECORDS === "undefined" || !RECORDS.length) { setTimeout(_mergeExtraCourt, 1000); return; }
+  // Wait until all sources have loaded (not just the first one)
+  if (typeof sourcesLoaded !== "undefined") {
+    var allDone = true;
+    for (var k in sourcesLoaded) { if (sourcesLoaded[k] !== true) { allDone = false; break; } }
+    if (!allDone) { setTimeout(_mergeExtraCourt, 1000); return; }
+  }
   if (window._extraCourtMerged) return;
   Promise.all([
     fetch("https://freecitizenreport.github.io/peninsula-viewer/court_data.json", {cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {};}),
