@@ -1020,6 +1020,29 @@ window.addEventListener('popstate', function(ev) {
     if (typeof renderLanding === 'function') renderLanding();
   }
 });
+
+// Filter court-case-number pseudo-charges (e.g., "HIT6603M1 GENERAL DISTRICT COURT")
+window.isCourtRefCharge = function(text){ if(!text) return false; var t=String(text).trim(); return /^[A-Z\d\-]{4,20}\s+(GENERAL\s+DISTRICT|CIRCUIT|JUVENILE|J\s*&\s*D\s*R|FAMILY|MUNICIPAL)\s+COURT$/i.test(t); };
+(function _scrubCharges(){
+  if (typeof RECORDS === "undefined" || !RECORDS.length) { setTimeout(_scrubCharges, 1000); return; }
+  if (window._chargesScrubbed) return;
+  var removed = 0;
+  RECORDS.forEach(function(r){
+    if (r.charges && r.charges.length) {
+      var orig = r.charges.length;
+      r.charges = r.charges.filter(function(c){
+        var t = (typeof c==="string"?c:(c.description||c.charge||c.text||""));
+        return !window.isCourtRefCharge(t);
+      });
+      removed += (orig - r.charges.length);
+    }
+  });
+  window._chargesScrubbed = true;
+  if (window._scrubLog) try { console.log("scrubbed " + removed + " court-ref pseudo-charges"); } catch(e){}
+  if (typeof populateChargeCodeFilter === "function") populateChargeCodeFilter();
+  if (typeof renderLanding === "function") renderLanding();
+  if (typeof render === "function" && document.getElementById("browse") && document.getElementById("browse").classList.contains("active")) render();
+})();
 </script>
 </body>
 </html>
