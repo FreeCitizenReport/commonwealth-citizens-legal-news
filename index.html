@@ -1043,6 +1043,37 @@ window.isCourtRefCharge = function(text){ if(!text) return false; var t=String(t
   if (typeof renderLanding === "function") renderLanding();
   if (typeof render === "function" && document.getElementById("browse") && document.getElementById("browse").classList.contains("active")) render();
 })();
+
+// Merge court history from per-jail viewers (Peninsula + Richmond not covered by primary pipeline)
+(function _mergeExtraCourt(){
+  if (typeof RECORDS === "undefined" || !RECORDS.length) { setTimeout(_mergeExtraCourt, 1000); return; }
+  if (window._extraCourtMerged) return;
+  Promise.all([
+    fetch("https://freecitizenreport.github.io/peninsula-viewer/court_data.json", {cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {};}),
+    fetch("https://freecitizenreport.github.io/richmond-viewer/court_data.json", {cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {};})
+  ]).then(function(results){
+    var pCourt = results[0] || {};
+    var rCourt = results[1] || {};
+    var merged = 0;
+    RECORDS.forEach(function(r){
+      if (r.courtHistory && r.courtHistory.length) return;
+      var src = r.source;
+      var key = r.id;
+      var hits = null;
+      if (src === "Peninsula" && pCourt[key]) hits = pCourt[key];
+      else if (src === "Richmond" && rCourt[key]) hits = rCourt[key];
+      if (hits && Array.isArray(hits) && hits.length) {
+        r.courtHistory = hits;
+        merged++;
+      }
+    });
+    window._extraCourtMerged = true;
+    window._extraCourtMergedCount = merged;
+    try { console.log("merged court history into " + merged + " records (Peninsula/Richmond)"); } catch(e){}
+    if (typeof renderLanding === "function") renderLanding();
+    if (typeof render === "function" && document.getElementById("browse") && document.getElementById("browse").classList.contains("active")) render();
+  });
+})();
 </script>
 </body>
 </html>
