@@ -465,26 +465,42 @@ runAll().catch(e => {
         "The page reads each source data.json directly and iframes the live Commonwealth aggregator to read its real RECORDS array and parseDate function. " +
         "Likely culprits: parseDate regression, scraper outage, stale data file, or normalization drift in one of the source viewers (Henrico, Richmond, Peninsula, Arlington, RRJ, VB, Pamunkey). " +
         "Confirm the diagnosis before pushing any code changes.";
-      try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(promptText).catch(function(){}); } } catch(e){}
-      try { window.open("https://claude.ai/new?q=" + encodeURIComponent(promptText), "_blank", "noopener"); } catch(e){}
+      function copyToClip(t){
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(t).then(function(){return true;}).catch(function(){return false;});
+        }
+        try { var ta=document.createElement("textarea"); ta.value=t; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); var ok=document.execCommand("copy"); document.body.removeChild(ta); return Promise.resolve(ok); } catch(e){ return Promise.resolve(false); }
+      }
       var existing = document.getElementById("fix-modal-overlay");
       if (existing) existing.remove();
       var ov = document.createElement("div");
       ov.id = "fix-modal-overlay";
       ov.className = "fix-modal-overlay";
       ov.innerHTML = '<div class="fix-modal" role="dialog" aria-modal="true">' +
-        '<h2>Got it &mdash; on the case</h2>' +
-        '<p>Forwarded this ' + status.toUpperCase() + ' to Claude:</p>' +
+        '<h2>Diagnostic copied &mdash; paste into Cowork</h2>' +
+        '<p>This ' + status.toUpperCase() + ' has been packaged into a prompt and copied to your clipboard:</p>' +
         '<div class="test-name">' + esc(title) + '</div>' +
         '<div class="detail-text">' + esc(detail) + '</div>' +
-        '<p>The diagnostic prompt has been <strong>copied to your clipboard</strong> and a new <strong>claude.ai</strong> tab has been opened with the request prefilled. Paste into your active Cowork session if you want it handled there instead.</p>' +
+        '<p style="margin-top:14px;">Switch to your <strong>Cowork desktop session</strong> and paste (&#8984;V). Cowork has access to your repos and data sources; the web claude.ai sandbox does not.</p>' +
+        '<details style="margin-top:10px;"><summary style="cursor:pointer;color:#94a3b8;font-size:13px;">Preview prompt</summary><textarea readonly id="fix-prompt-preview" style="width:100%;height:140px;margin-top:8px;background:#0f0f0f;color:#d4d4d4;border:1px solid #333;border-radius:6px;padding:10px;font-family:ui-monospace,monospace;font-size:12px;resize:vertical;"></textarea></details>' +
         '<div class="fix-modal-actions">' +
           '<button class="secondary" onclick="document.getElementById(&quot;fix-modal-overlay&quot;).remove()">Close</button>' +
+          '<button id="fix-copy-again">Copy again</button>' +
         '</div></div>';
       ov.addEventListener("click", function(e){ if (e.target === ov) ov.remove(); });
       function escClose(e){ if (e.key === "Escape") { var o=document.getElementById("fix-modal-overlay"); if(o)o.remove(); document.removeEventListener("keydown", escClose); } }
       document.addEventListener("keydown", escClose);
       document.body.appendChild(ov);
+      var ta = document.getElementById("fix-prompt-preview");
+      if (ta) ta.value = promptText;
+      copyToClip(promptText).then(function(ok){
+        var btn = document.getElementById("fix-copy-again");
+        if (btn) {
+          btn.textContent = ok ? "Copy again" : "Copy now";
+          btn.onclick = function(){ copyToClip(promptText).then(function(o){ btn.textContent = o ? "Copied \u2713" : "Copy failed \u2014 select the preview manually"; setTimeout(function(){ btn.textContent = "Copy again"; }, 2000); }); };
+        }
+      });
+    }
     }
   </script>
 </body>
