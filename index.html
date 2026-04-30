@@ -84,6 +84,8 @@ a:hover { text-decoration: underline; }
 #landing .recent-card .rc-meta { padding: 8px; }
 #landing .recent-card .rc-name { font-size: 12px; font-weight: 600; color: #f0f6fc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #landing .recent-card .rc-date { font-size: 10px; color: #8b949e; }
+.rc-charge { font-size: 10px; color: #f0883e; margin-top: 3px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.charge-more { display: inline-block; background: rgba(240,136,62,0.18); color: #f0883e; padding: 0 5px; border-radius: 8px; font-size: 9px; font-weight: 600; margin-left: 2px; vertical-align: middle; }
 
 #browse { display: none; max-width: 1600px; margin: 0 auto; padding: 12px; }
 #browse.active { display: flex; gap: 12px; }
@@ -759,6 +761,7 @@ function renderLanding() {
     rmHTML += '<div class="rc-meta">';
     rmHTML += '<div class="rc-name">' + esc(r.name) + '</div>';
     rmHTML += '<div class="rc-date">' + esc(SOURCE_LABELS[r.source] || r.source) + ' \u00b7 ' + esc(fmtDate(r.bookDate)) + '</div>';
+    if (r.charges && r.charges.length > 0) { var _c0 = typeof r.charges[0] === 'string' ? r.charges[0] : (r.charges[0] && r.charges[0].description || 'Unknown Charge'); rmHTML += '<div class="rc-charge">' + esc(_c0) + (r.charges.length > 1 ? ' <span class="charge-more">+' + (r.charges.length - 1) + '</span>' : '') + '</div>'; }
     rmHTML += '</div></div>';
   });
   document.getElementById('recent-mugs').innerHTML = rmHTML;
